@@ -287,6 +287,36 @@
     }
   }
 
+  // ---- castle drawing (battlements + door + flag) ----
+  function drawCastle(cx, cy, r) {
+    const w = r * 1.7, h = r * 1.7;       // body size
+    const left = cx - w / 2, top = cy - h / 2 + 6;
+    // stone body
+    ctx.fillStyle = "#cfd8e0";
+    ctx.fillRect(left, top, w, h);
+    ctx.strokeStyle = "#8a96a3"; ctx.lineWidth = 1; ctx.strokeRect(left, top, w, h);
+    // crenellations (battlements) along the top
+    ctx.fillStyle = "#cfd8e0";
+    const merlons = 4, mw = w / (merlons * 2 - 1);
+    for (let i = 0; i < merlons; i++) ctx.fillRect(left + i * mw * 2, top - mw, mw, mw);
+    ctx.strokeStyle = "#8a96a3";
+    for (let i = 0; i < merlons; i++) ctx.strokeRect(left + i * mw * 2, top - mw, mw, mw);
+    // door
+    ctx.fillStyle = "#3a2a1a";
+    ctx.fillRect(cx - w * 0.16, cy + h / 2 - h * 0.42, w * 0.32, h * 0.42);
+    // little tower on the side
+    ctx.fillStyle = "#bcc7d2";
+    ctx.fillRect(left - 6, top + h * 0.15, 10, h * 0.85);
+    ctx.strokeStyle = "#8a96a3"; ctx.strokeRect(left - 6, top + h * 0.15, 10, h * 0.85);
+    ctx.fillStyle = "#bcc7d2"; ctx.fillRect(left - 8, top + h * 0.15 - 5, 14, 5);
+    // flag with B
+    ctx.strokeStyle = "#05070a"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, top - mw); ctx.lineTo(cx, top - mw - 16); ctx.stroke();
+    ctx.fillStyle = "#19f0c8";
+    ctx.beginPath(); ctx.moveTo(cx, top - mw - 16); ctx.lineTo(cx + 14, top - mw - 12); ctx.lineTo(cx, top - mw - 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#05070a"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center"; ctx.fillText("B", cx, top + h * 0.55);
+  }
+
   // ---- draw ----
   function draw() {
     const s = state;
@@ -317,9 +347,8 @@
     for (let i = 1; i < PATH.length; i++) ctx.lineTo(PATH[i].x, PATH[i].y);
     ctx.stroke(); ctx.setLineDash([]);
 
-    // castle / bunker
-    ctx.fillStyle = "#19f0c8"; ctx.beginPath(); ctx.arc(CASTLE.x, CASTLE.y, CASTLE.r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#05070a"; ctx.font = "bold 12px monospace"; ctx.textAlign = "center"; ctx.fillText("B", CASTLE.x, CASTLE.y + 4);
+    // castle / bunker (drawn as a small castle)
+    drawCastle(CASTLE.x, CASTLE.y, CASTLE.r);
 
     // slots
     for (const slot of s.slots) {
