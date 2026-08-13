@@ -79,7 +79,7 @@
     // n is 1-based wave number
     const tier = Math.floor((n - 1) / 20); // 0..4 difficulty bands
     const scale = 1 + (n - 1) * 0.12;      // enemy HP/speed ramp
-    const count = 5 + Math.floor(n * 0.9); // more enemies each wave
+    const count = 2 * (5 + Math.floor(n * 0.9)); // doubled enemy density per wave
     const comp = [0, 0, 0, 0, 0];
     // weight toward tougher enemies as waves climb
     comp[0] = Math.max(2, Math.round(6 * Math.max(0.3, 1 - n * 0.02))); // roombas
