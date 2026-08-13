@@ -220,9 +220,9 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
     if (b.shield > 0) b.shield--;
     if (b.invuln > 0) b.invuln--;
 
-    // fire (CTRL) — Ben finally fights back
+    // fire (J, F, or CTRL) — Ben finally fights back
     if (s.fireCd > 0) s.fireCd--;
-    if ((s.keys["control"] || s.ctrlHeld) && s.fireCd <= 0) {
+    if ((s.keys["j"] || s.keys["f"] || s.keys["control"] || s.ctrlHeld) && s.fireCd <= 0) {
       s.bullets.push({ x: b.x, y: b.y - b.r, vy: -11 });
       s.fireCd = 8;
     }
