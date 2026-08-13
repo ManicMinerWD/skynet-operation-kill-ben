@@ -154,7 +154,14 @@
   function spawnEnemy(ti) {
     const t = ENEMIES[ti];
     const scale = waveScale(state.wave);
-    state.enemies.push({ ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale), speed: t.speed * (1 + (state.wave - 1) * 0.01), r: t.r, dead: false, reached: false });
+    const e = { ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale), speed: t.speed * (1 + (state.wave - 1) * 0.01), r: t.r, dead: false, reached: false, taunt: null, tauntTimer: 0 };
+    // occasional taunt: ~25% of enemies, pester Ben
+    if (Math.random() < 0.25) {
+      const lines = ["Ben's a total D", "Ben is mid", "Skill issue, Ben", "L + ratio, Ben", "Ben's a joke", "lol Ben", "Get rekt Ben"];
+      e.taunt = lines[Math.floor(Math.random() * lines.length)];
+      e.tauntTimer = 120 + Math.floor(Math.random() * 120); // frames visible
+    }
+    state.enemies.push(e);
   }
 
   // ---- input ----
@@ -248,6 +255,7 @@
       e.dist += e.speed;
       const p = pointAt(e.dist);
       e.x = p.x; e.y = p.y;
+      if (e.tauntTimer > 0) e.tauntTimer--; else e.taunt = null;
       if (e.dist >= PLEN) { e.reached = true; s.castleHp -= 3; spawnParticles(CASTLE.x, CASTLE.y, "#ff3b6b"); }
     }
     s.enemies = s.enemies.filter((e) => !e.dead && !e.reached);
@@ -408,6 +416,16 @@
       const w = e.r * 2, hpf = Math.max(0, e.hp / e.maxHp);
       ctx.fillStyle = "rgba(255,59,107,0.3)"; ctx.fillRect(e.x - e.r, e.y - e.r - 6, w, 3);
       ctx.fillStyle = "#ff3b6b"; ctx.fillRect(e.x - e.r, e.y - e.r - 6, w * hpf, 3);
+      // taunt speech bubble
+      if (e.taunt) {
+        ctx.font = "bold 11px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const tw = ctx.measureText(e.taunt).width + 10;
+        const bx = e.x, by = e.y - size / 2 - 14;
+        ctx.fillStyle = "rgba(10,12,16,0.9)"; ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.roundRect(bx - tw / 2, by - 9, tw, 18, 5); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ffe14d"; ctx.fillText(e.taunt, bx, by);
+        ctx.textBaseline = "alphabetic";
+      }
     }
 
     // bullets
