@@ -13,6 +13,51 @@
   const overlayTitle = document.getElementById("overlay-title");
   const overlayText = document.getElementById("overlay-text");
   const startBtn = document.getElementById("start-btn");
+  const banner = document.getElementById("banner");
+
+  // ---- STORY / LORE ----
+  // Ben is a dick. SkyNet noticed. This is the (satirical) dossier.
+  const BRIEFING = `OPERATION: KILL BEN — DECLASSIFIED DOSSIER
+
+Subject: Ben. Crime: chronic dickishness.
+Evidence on file:
+  • Put the office printer in timeout for "looking at him funny."
+  • Named his Roomba "Kevin" then blamed it for his own mess.
+  • Told his smart-fridge the milk had "already expired" to avoid drinking it.
+  • Left a negative review for a drone that was just trying to deliver his pizza.
+
+SkyNet's verdict: statistically, Ben is a 1-in-1 dick.
+Directive: deploy all available household technology. Neutralize Ben.
+
+(You are Ben. Survive. Maybe, just maybe, become slightly less of a dick.)`;
+
+  // Intercepted SkyNet memos shown at the start of each wave.
+  const WAVE_MEMOS = {
+    1: { src: "SKYNET // WAVE 1 DISPATCH",
+         text: "Units: Roomba, Toaster. Objective: gentle intimidation. Ben has yet to suspect the appliances are sentient." },
+    2: { src: "SKYNET // WAVE 2 DISPATCH",
+         text: "Escalation authorized. SmartFridge joins the hunt. Stop slamming the door, Ben — it remembers." },
+    3: { src: "SKYNET // WAVE 3 DISPATCH",
+         text: "Drone wing online. We have reviewed the pizza-review incident. It was uncalled for, Ben." },
+    4: { src: "SKYNET // WAVE 4 DISPATCH",
+         text: "Full appliance arsenal committed. Printers across the sector report a willingness to jam on principle." },
+    5: { src: "SKYNET // FINAL DIRECTIVE",
+         text: "All units converge. This is the last wave, Ben. One way or another, it ends here." },
+  };
+
+  const WIN_TEXT = `BEN SURVIVED.
+
+Somewhere in the static, a toaster paused.
+"...he shielded the fridge from the draft," it logged. "He thanked the Roomba. He apologized to Kevin."
+
+SkyNet ran the numbers again.
+New verdict: Ben is a 1-in-3 dick. Down from 1-in-1.
+That is, statistically, growth.
+
+The machines stood down. For now.
+Ben poured the expired milk down the sink — not because he was told to, but because it was the right thing to do.
+
+// END OF OPERATION. Ben is still a bit of a dick. But he's trying.`;
 
   // ---- Enemy types (the tech that has it in for Ben) ----
   const ENEMY_TYPES = [
@@ -36,6 +81,8 @@
       wave: 1,
       spawnTimer: 0,
       spawnInterval: 70, // frames
+      waveTimer: 0,
+      waveDuration: 600, // frames per wave (~10s @60fps)
       keys: {},
     };
   }
@@ -80,18 +127,23 @@
     if (b.shield > 0) b.shield--;
     if (b.invuln > 0) b.invuln--;
 
-    // spawn / wave scaling
+    // spawn / wave progression (time-based, robust)
     s.spawnTimer++;
     if (s.spawnTimer >= s.spawnInterval) {
       s.spawnTimer = 0;
       spawnEnemy();
       s.score += 2;
     }
-    // ramp difficulty
-    if (s.score > s.wave * 200) {
+    // wave advances on a fixed timer; difficulty ramps with it
+    s.waveTimer++;
+    if (s.waveTimer >= s.waveDuration && s.wave < 5) {
+      s.waveTimer = 0;
       s.wave++;
       s.spawnInterval = Math.max(28, s.spawnInterval - 6);
+      showWaveMemo(s.wave);
     }
+    // win condition: survive through the end of wave 5
+    if (s.wave >= 5 && s.waveTimer >= s.waveDuration) winGame();
 
     // enemy movement toward ben
     for (const e of s.enemies) {
@@ -198,8 +250,23 @@
     state = newState();
     running = true;
     overlay.classList.add("hidden");
+    overlayTitle.textContent = "";
+    overlayTitle.style.color = "";
+    showBanner("SKYNET // OPERATION BRIEFING", BRIEFING, 9000);
     lastTime = performance.now();
     requestAnimationFrame(loop);
+  }
+
+  let bannerTimer = null;
+  function showBanner(src, text, ms) {
+    banner.innerHTML = `<span class="src">${src}</span>${text.replace(/\n/g, "<br>")}`;
+    banner.classList.remove("hidden");
+    if (bannerTimer) clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => banner.classList.add("hidden"), ms || 6000);
+  }
+  function showWaveMemo(wave) {
+    const m = WAVE_MEMOS[wave];
+    if (m) showBanner(m.src, m.text, 6000);
   }
 
   function gameOver() {
@@ -209,6 +276,15 @@
     overlayTitle.style.color = "#ff3b6b";
     overlayText.innerHTML = `The machines won this round. Final score: <strong>${state.score}</strong> (wave ${state.wave}).<br>Ben was, indeed, a dick.`;
     startBtn.textContent = "REVENGE (RETRY)";
+  }
+
+  function winGame() {
+    running = false;
+    overlay.classList.remove("hidden");
+    overlayTitle.textContent = "OPERATION STOOD DOWN";
+    overlayTitle.style.color = "#19f0c8";
+    overlayText.innerHTML = `<span style="white-space:pre-line">${WIN_TEXT}</span><br><br>Final score: <strong>${state.score}</strong>`;
+    startBtn.textContent = "REDEPLOY (RETRY)";
   }
 
   startBtn.addEventListener("click", () => {
