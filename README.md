@@ -19,11 +19,12 @@ Ben's bunker. Your job: turn Ben's own gadgets against the siege.
 
 - **Build:** click a dashed **+** slot (beside the path) to open the build menu,
   then pick a turret. Click a built turret to **upgrade** it (gold cost).
-- **Economy:** you start with 200 gold. Each wave grants +25. Every appliance you
+- **Economy:** you start with 140 gold. Each level grants +20. Every appliance you
   destroy drops a bounty. Turrets cost gold; upgrades cost more.
-- **Castle HP:** Ben's bunker has 20 HP. Each appliance that reaches the bunker
-  costs 2 HP. At 0 → game over.
-- **Win:** clear all 5 waves with the bunker standing.
+- **Castle HP:** Ben's bunker has 15 HP. Each appliance that reaches the bunker
+  costs 3 HP. At 0 → game over.
+- **Win:** clear all **100 levels** with the bunker standing. Enemies scale up
+  every level (more HP, faster, more of them, tougher types appear later).
 
 ### Turrets
 

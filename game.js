@@ -35,12 +35,12 @@
 
   // ---- TOWER TYPES ----
   const TOWERS = {
-    toaster: { name: "Toaster Turret", color: "#e08b3a", cost: 50, range: 110, dmg: 6, rate: 18, splash: 0,
-               up: { cost: 60, dmg: 12, range: 130 } },
-    fridge:  { name: "Fridge Mortar", color: "#7fd0ff", cost: 90, range: 140, dmg: 18, rate: 45, splash: 38,
-               up: { cost: 90, dmg: 32, range: 160 } },
-    drone:   { name: "Drone Sentry", color: "#ff5b7a", cost: 70, range: 150, dmg: 9, rate: 12, splash: 0,
-               up: { cost: 80, dmg: 16, range: 175 } },
+    toaster: { name: "Toaster Turret", color: "#e08b3a", cost: 65, range: 110, dmg: 6, rate: 18, splash: 0,
+               up: { cost: 80, dmg: 12, range: 130 } },
+    fridge:  { name: "Fridge Mortar", color: "#7fd0ff", cost: 110, range: 140, dmg: 18, rate: 45, splash: 38,
+               up: { cost: 120, dmg: 32, range: 160 } },
+    drone:   { name: "Drone Sentry", color: "#ff5b7a", cost: 85, range: 150, dmg: 9, rate: 12, splash: 0,
+               up: { cost: 100, dmg: 16, range: 175 } },
   };
 
   // ---- ENEMY TYPES ----
@@ -52,21 +52,37 @@
     { name: "Printer", color: "#c0c0c0", r: 17, hp: 60, speed: 0.7, bounty: 18 },
   ];
 
-  // ---- WAVES (type indices + counts) ----
-  const WAVES = [
-    { comp: [0,0,0,0,0].map((_,i)=>i===0?6:0), spawn: 55 },          // wave1: 6 roombas
-    { comp: [3,3,0,0,0], spawn: 50 },                                 // wave2
-    { comp: [3,2,1,0,0], spawn: 48 },                                 // wave3
-    { comp: [4,3,1,2,0], spawn: 44 },                                 // wave4
-    { comp: [6,4,2,3,2], spawn: 40 },                                 // wave5 boss-ish
-  ];
+  // ---- WAVES: 100 escalating levels, generated ----
+  const WAVE_COUNT = 100;
+  function genWave(n) {
+    // n is 1-based wave number
+    const tier = Math.floor((n - 1) / 20); // 0..4 difficulty bands
+    const scale = 1 + (n - 1) * 0.12;      // enemy HP/speed ramp
+    const count = 5 + Math.floor(n * 0.9); // more enemies each wave
+    const comp = [0, 0, 0, 0, 0];
+    // weight toward tougher enemies as waves climb
+    comp[0] = Math.max(2, Math.round(6 * Math.max(0.3, 1 - n * 0.02))); // roombas
+    comp[1] = Math.round(3 + n * 0.15);  // toasters
+    comp[2] = Math.round((n >= 3 ? 1 : 0) + n * 0.06); // fridges
+    comp[3] = Math.round((n >= 2 ? 1 : 0) + n * 0.10); // drones
+    comp[4] = Math.round((n >= 4 ? 1 : 0) + n * 0.05); // printers
+    const total = comp.reduce((a, b) => a + b, 0);
+    const adj = Math.max(count, total);
+    // normalize to ~adj enemies
+    const f = adj / total;
+    for (let i = 0; i < 5; i++) comp[i] = Math.round(comp[i] * f);
+    const spawn = Math.max(18, 55 - n * 0.4); // faster spawns later
+    return { comp, spawn: Math.round(spawn), scale, tier };
+  }
+  // expose per-wave enemy scaling via a lookup the spawner uses
+  function waveScale(n) { return 1 + (n - 1) * 0.12; }
 
   let state = null, running = false, lastTime = 0;
   let selectedSlot = null; // slot index awaiting tower choice
 
   function newState() {
     return {
-      gold: 200, castleHp: 20, castleMax: 20,
+      gold: 140, castleHp: 15, castleMax: 15,
       wave: 0, // 0 = pre-game / between waves
       enemies: [], towers: [], bullets: [], particles: [],
       spawnQueue: [], spawnTimer: 0, spawnInterval: 55,
@@ -101,8 +117,8 @@
   // ---- spawning ----
   function startWave() {
     state.wave++;
-    if (state.wave > WAVES.length) return;
-    const w = WAVES[state.wave - 1];
+    if (state.wave > WAVE_COUNT) return;
+    const w = genWave(state.wave);
     state.spawnQueue = [];
     w.comp.forEach((n, ti) => { for (let i = 0; i < n; i++) state.spawnQueue.push(ti); });
     // shuffle
@@ -110,13 +126,14 @@
     state.spawnInterval = w.spawn;
     state.spawnTimer = 0;
     state.waveActive = true;
-    state.gold += 25;
-    showBanner("SKYNET // WAVE " + state.wave, "The appliances advance. Build your defenses, Ben.", 3500);
+    state.gold += 20;
+    showBanner("SKYNET // LEVEL " + state.wave + "/" + WAVE_COUNT, "The appliances advance. Build your defenses, Ben.", 3500);
   }
 
   function spawnEnemy(ti) {
     const t = ENEMIES[ti];
-    state.enemies.push({ ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: t.hp, maxHp: t.hp, speed: t.speed, r: t.r, dead: false, reached: false });
+    const scale = waveScale(state.wave);
+    state.enemies.push({ ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale), speed: t.speed * (1 + (state.wave - 1) * 0.01), r: t.r, dead: false, reached: false });
   }
 
   // ---- input ----
@@ -198,9 +215,9 @@
       } else if (s.enemies.length === 0) {
         // wave cleared
         s.waveActive = false;
-        if (s.wave >= WAVES.length) { winGame(); return; }
+        if (s.wave >= WAVE_COUNT) { winGame(); return; }
         s.betweenTimer = 150;
-        showBanner("SKYNET // WAVE CLEARED", "Wave " + s.wave + " down. Regroup, Ben.", 2500);
+        showBanner("SKYNET // LEVEL " + s.wave + " CLEARED", "Level " + s.wave + " down. Regroup, Ben.", 2500);
       }
     }
 
@@ -210,7 +227,7 @@
       e.dist += e.speed;
       const p = pointAt(e.dist);
       e.x = p.x; e.y = p.y;
-      if (e.dist >= PLEN) { e.reached = true; s.castleHp -= 2; spawnParticles(CASTLE.x, CASTLE.y, "#ff3b6b"); }
+      if (e.dist >= PLEN) { e.reached = true; s.castleHp -= 3; spawnParticles(CASTLE.x, CASTLE.y, "#ff3b6b"); }
     }
     s.enemies = s.enemies.filter((e) => !e.dead && !e.reached);
 
@@ -250,7 +267,7 @@
 
     // HUD
     goldEl.textContent = s.gold;
-    waveEl.textContent = s.wave + "/" + WAVES.length;
+    waveEl.textContent = s.wave + "/" + WAVE_COUNT;
     castleEl.textContent = Math.max(0, s.castleHp);
     if (s.castleHp <= 0) { gameOver(); return; }
   }
@@ -360,7 +377,7 @@
     overlay.classList.remove("hidden");
     overlayTitle.textContent = "BEN DEFENDED";
     overlayTitle.style.color = "#19f0c8";
-    overlayText.innerHTML = `All 5 waves repelled. Ben's bunker stands.<br>SkyNet recalculated: a man with good turrets is only a <em>1-in-4</em> dick.<br>Growth.`;
+    overlayText.innerHTML = `All ${WAVE_COUNT} levels repelled. Ben's bunker stands.<br>SkyNet recalculated: a man with good turrets is only a <em>1-in-4</em> dick.<br>Growth.`;
     startBtn.textContent = "REDEPLOY (RETRY)";
   }
 

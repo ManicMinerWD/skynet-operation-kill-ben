@@ -4,26 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SkyNet Operation: Kill Ben — Castle Defense</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
   <div id="game-wrap">
     <h1>SKYNET: CASTLE DEFENSE</h1>
-    <p class="subtitle">Appliances are coming for Ben's bunker. Build turrets. Survive 5 waves.</p>
+    <p class="subtitle">Appliances are coming for Ben's bunker. Build turrets. Survive 100 levels.</p>
 
     <canvas id="game" width="800" height="500"></canvas>
 
     <div id="hud">
-      <span>Gold: <strong id="gold">200</strong></span>
-      <span>Wave: <strong id="wave">0/5</strong></span>
-      <span>Bunker HP: <strong id="castle">20</strong></span>
+      <span>Gold: <strong id="gold">140</strong></span>
+      <span>Level: <strong id="wave">0/100</strong></span>
+      <span>Bunker HP: <strong id="castle">15</strong></span>
     </div>
 
     <div id="legend">
       Click a <strong>+</strong> slot to build. Click a built turret to upgrade. Towers:
-      <span class="lg toaster">Toaster Turret (50, fast)</span> &middot;
-      <span class="lg fridge">Fridge Mortar (90, splash)</span> &middot;
-      <span class="lg drone">Drone Sentry (70, precise)</span>
+      <span class="lg toaster">Toaster Turret (65, fast)</span> &middot;
+      <span class="lg fridge">Fridge Mortar (110, splash)</span> &middot;
+      <span class="lg drone">Drone Sentry (85, precise)</span>
     </div>
 
     <div id="tower-menu">
@@ -43,6 +43,6 @@
       </div>
     </div>
   </div>
-  <script src="game.js"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>
