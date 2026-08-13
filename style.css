@@ -40,6 +40,11 @@ canvas {
   color: var(--ink);
 }
 #hud strong { color: var(--neon); }
+#music-btn {
+  background: #11202a; color: var(--neon); border: 1px solid var(--neon);
+  border-radius: 6px; padding: 4px 10px; font: 13px monospace; cursor: pointer;
+}
+#music-btn:hover { background: #16313f; }
 #overlay {
   position: fixed;
   inset: 0;

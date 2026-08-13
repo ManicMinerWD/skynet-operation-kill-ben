@@ -456,11 +456,39 @@
     requestAnimationFrame(loop);
   }
 
+  // ---- music (original Axel-F-style chiptune loop) ----
+  let audioCtx = null, musicBuffer = null, musicSource = null, musicOn = true, musicReady = false;
+  function initAudio() {
+    if (audioCtx) return;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; return; }
+    fetch("music.wav").then((r) => r.arrayBuffer()).then((buf) => audioCtx.decodeAudioData(buf)).then((dec) => {
+      musicBuffer = dec; musicReady = true; if (musicOn) playMusic();
+    }).catch(() => { musicReady = false; });
+  }
+  function playMusic() {
+    if (!audioCtx || !musicBuffer || !musicOn) return;
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    musicSource = audioCtx.createBufferSource();
+    musicSource.buffer = musicBuffer; musicSource.loop = true;
+    musicSource.connect(audioCtx.destination);
+    musicSource.start(0);
+  }
+  function stopMusic() { if (musicSource) { try { musicSource.stop(); } catch (e) {} musicSource = null; } }
+  function toggleMusic() {
+    musicOn = !musicOn;
+    const b = document.getElementById("music-btn");
+    if (b) b.textContent = musicOn ? "♪ Music: ON" : "♪ Music: OFF";
+    if (musicOn) { initAudio(); playMusic(); } else { stopMusic(); }
+  }
+  const musicBtn = document.getElementById("music-btn");
+  if (musicBtn) musicBtn.addEventListener("click", toggleMusic);
+
   function startGame() {
     state = newState();
     running = true;
     overlay.classList.add("hidden");
     closeTowerMenu();
+    initAudio(); // start music on user gesture (autoplay policy)
     showBanner("SKYNET // CASTLE DEFENSE", "Appliances are coming for Ben's bunker. Click a + slot to build a turret. Survive 5 waves.", 5000);
     lastTime = performance.now();
     requestAnimationFrame(loop);
