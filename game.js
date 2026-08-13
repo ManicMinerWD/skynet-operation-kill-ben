@@ -325,9 +325,32 @@
     for (const slot of s.slots) {
       if (slot.tower) {
         const t = slot.tower;
+        // base disc
         ctx.beginPath(); ctx.arc(slot.x, slot.y, 15, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
-        if (t.upgraded) { ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.stroke(); }
-        ctx.fillStyle = "#05070a"; ctx.font = "10px monospace"; ctx.fillText(t.kind[0].toUpperCase(), slot.x, slot.y + 3);
+        ctx.fillStyle = "#05070a";
+        // per-type mini icon (no letters)
+        if (t.kind === "toaster") {
+          // toaster: rounded slot + lever knob
+          ctx.fillStyle = "#05070a";
+          ctx.fillRect(slot.x - 7, slot.y - 4, 14, 8);
+          ctx.fillStyle = t.color;
+          ctx.beginPath(); ctx.arc(slot.x + 8, slot.y - 6, 2.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#05070a"; ctx.fillRect(slot.x - 5, slot.y - 7, 10, 2);
+        } else if (t.kind === "fridge") {
+          // fridge: tall box + handle line
+          ctx.fillStyle = "#05070a";
+          ctx.fillRect(slot.x - 6, slot.y - 9, 12, 18);
+          ctx.fillStyle = t.color;
+          ctx.fillRect(slot.x + 3, slot.y - 7, 2, 14);
+          ctx.fillStyle = "#05070a"; ctx.fillRect(slot.x - 6, slot.y - 1, 12, 1.5);
+        } else if (t.kind === "drone") {
+          // drone: center body + 4 rotor dots
+          ctx.fillStyle = "#05070a";
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = t.color;
+          [[-7,-7],[7,-7],[-7,7],[7,7]].forEach(([dx,dy]) => { ctx.beginPath(); ctx.arc(slot.x+dx, slot.y+dy, 2.5, 0, Math.PI*2); ctx.fill(); });
+        }
+        if (t.upgraded) { ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(slot.x, slot.y, 15, 0, Math.PI * 2); ctx.stroke(); }
         // range ring when hovered/selected
         if (selectedSlot !== null && s.slots[selectedSlot] === slot) {
           ctx.strokeStyle = "rgba(25,240,200,0.4)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(slot.x, slot.y, t.range, 0, Math.PI * 2); ctx.stroke();
