@@ -12,6 +12,11 @@
   let bgReady = false;
   bgImg.onload = () => { bgReady = true; };
 
+  // ---- enemy sprites (generated appliance art) ----
+  const ENEMY_SPRITES = ["roomba", "toaster", "fridge", "drone", "printer"].map((n) => {
+    const im = new Image(); im.src = "enemies/" + n + ".png"; return im;
+  });
+
   const goldEl = document.getElementById("gold");
   const waveEl = document.getElementById("wave");
   const castleEl = document.getElementById("castle");
@@ -394,8 +399,14 @@
 
     // enemies
     for (const e of s.enemies) {
-      const t = ENEMIES[e.ti];
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+      const spr = ENEMY_SPRITES[e.ti];
+      const size = e.r * 2.6;
+      if (spr && spr.complete && spr.naturalWidth) {
+        ctx.drawImage(spr, e.x - size / 2, e.y - size / 2, size, size);
+      } else {
+        // fallback while image loads
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fillStyle = ENEMIES[e.ti].color; ctx.fill();
+      }
       // hp pip
       const w = e.r * 2, hpf = Math.max(0, e.hp / e.maxHp);
       ctx.fillStyle = "rgba(255,59,107,0.3)"; ctx.fillRect(e.x - e.r, e.y - e.r - 6, w, 3);
