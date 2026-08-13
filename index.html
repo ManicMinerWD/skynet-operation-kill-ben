@@ -3,34 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SkyNet Operation: Kill Ben</title>
+  <title>SkyNet Operation: Kill Ben — Castle Defense</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="game-wrap">
-    <h1>SKYNET: OPERATION KILL BEN</h1>
-    <p class="subtitle">Ben is a dick. The machines have noticed.</p>
-
-    <div id="mode-select">
-      <button class="mode-btn active" data-mode="defend">DEFEND (you are Ben)</button>
-      <button class="mode-btn" data-mode="redeem">REDEEM (you are Kevin the Roomba)</button>
-    </div>
+    <h1>SKYNET: CASTLE DEFENSE</h1>
+    <p class="subtitle">Appliances are coming for Ben's bunker. Build turrets. Survive 5 waves.</p>
 
     <canvas id="game" width="800" height="500"></canvas>
 
     <div id="hud">
-      <span>Score: <strong id="score">0</strong></span>
-      <span>Wave: <strong id="wave">1</strong></span>
-      <span>HP: <strong id="hp">100</strong></span>
-      <span>Shield: <strong id="shield">0</strong></span>
-      <span class="deeds-row">Deeds: <strong id="depts">0/5</strong></span>
+      <span>Gold: <strong id="gold">200</strong></span>
+      <span>Wave: <strong id="wave">0/5</strong></span>
+      <span>Bunker HP: <strong id="castle">20</strong></span>
     </div>
 
     <div id="legend">
-      Move: WASD/Arrows &middot; Shield: SPACE &middot; <strong>Fire: J / F / CTRL</strong><br>
-      Power-ups: <span class="lg coffee">C coffee (+speed)</span> &middot;
-      <span class="lg firewall">F firewall (shield)</span> &middot;
-      <span class="lg sock">+ lucky sock (+30 HP)</span>
+      Click a <strong>+</strong> slot to build. Click a built turret to upgrade. Towers:
+      <span class="lg toaster">Toaster Turret (50, fast)</span> &middot;
+      <span class="lg fridge">Fridge Mortar (90, splash)</span> &middot;
+      <span class="lg drone">Drone Sentry (70, precise)</span>
+    </div>
+
+    <div id="tower-menu">
+      <div class="tm-title">Build / Upgrade</div>
+      <button class="tower-btn" data-tower="toaster">Toaster Turret</button>
+      <button class="tower-btn" data-tower="fridge">Fridge Mortar</button>
+      <button class="tower-btn" data-tower="drone">Drone Sentry</button>
     </div>
 
     <div id="banner" class="hidden"></div>
@@ -38,8 +38,7 @@
     <div id="overlay">
       <div class="panel">
         <h2 id="overlay-title">SKYNET ONLINE</h2>
-        <p id="overlay-text">Defend Ben from the machines. Move: WASD / Arrows. Block: SPACE.</p>
-        <div id="leaderboard"></div>
+        <p id="overlay-text">Defend Ben's bunker from waves of rogue appliances. Build turrets on the + slots. Gold from kills funds more defense.</p>
         <button id="start-btn">DEPLOY BEN</button>
       </div>
     </div>

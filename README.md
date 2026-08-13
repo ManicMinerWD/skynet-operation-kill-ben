@@ -1,54 +1,50 @@
-# SkyNet Operation: Kill Ben
+# SkyNet Operation: Kill Ben — Castle Defense
 
 > "Ben is a dick. So we let the machines handle it." — SkyNet Command
 
-A tongue-in-cheek browser arcade game. You play as **Ben** (a reluctant
-everyman) — or as **Kevin the Roomba** — and tangle with waves of rogue
-household technology that has decided Ben is, scientifically, a dick. This is
-a joke project. No real people, animals, or appliances were harmed.
+A tongue-in-cheek **castle-defense** game (Kingdom-Rush-lite) built on the same
+Ben/skynet joke. Rogue household appliances march a path toward **Ben's bunker**.
+You build turrets from household gear, spend gold, and survive 5 waves.
 
 This is a joke project. No real people, animals, or appliances were harmed.
 Ben is a fictional punching-bag character.
 
-## The Story
+## Premise
 
-Ben — through a series of petty crimes (putting the office printer in timeout,
-blaming his Roomba "Kevin" for his own mess, gaslighting his smart-fridge about
-expired milk, and leaving a bad review for a pizza drone) — achieved a
-**1-in-1 dick** rating. SkyNet noticed. The household technology has been
-deployed.
+SkyNet has deployed the appliances. They're done asking nicely. Roombas,
+toasters, smart-fridges, delivery drones, and jammed printers are converging on
+Ben's bunker. Your job: turn Ben's own gadgets against the siege.
 
-- **Defend mode:** you are Ben. Dodge the waves, shield when you can, and
-  survive to wave 5. If you make it, the machines — reviewing the footage —
-  downgrade Ben to a **1-in-3 dick**. Growth. They stand down.
-- **Redemption mode (co-op):** you are Kevin the Roomba. Herd Ben onto the
-  glowing Good-Deed tiles before the rogue tech catches him. Five deeds and Ben
-  becomes a *1-in-5 dick* — the best rating on record for this subject.
+## How to play
 
-## Two Modes
+- **Build:** click a dashed **+** slot (beside the path) to open the build menu,
+  then pick a turret. Click a built turret to **upgrade** it (gold cost).
+- **Economy:** you start with 200 gold. Each wave grants +25. Every appliance you
+  destroy drops a bounty. Turrets cost gold; upgrades cost more.
+- **Castle HP:** Ben's bunker has 20 HP. Each appliance that reaches the bunker
+  costs 2 HP. At 0 → game over.
+- **Win:** clear all 5 waves with the bunker standing.
 
-### 1. DEFEND — "you are Ben"
-- Survive 5 waves of rogue tech.
-- **Move:** WASD / Arrow keys. **Block:** Space (temporary shield). **Fire:** J, F, or CTRL (Ben shoots the appliances — they now have HP and a health pip; kills score points).
-- **Power-ups** spawn on the field:
-  - ☕ **Coffee** — +speed for 5s.
-  - 🛡 **Firewall** — long shield (4s).
-  - 🧦 **Lucky Sock** — +30 HP.
-- Win: survive the final wave. Lose: HP hits 0.
+### Turrets
 
-### 2. REDEEM — "you are Kevin the Roomba" (co-op)
-- **Player 1 (Kevin):** WASD / Arrows drives the Roomba. Ben follows you.
-- **Player 2 (optional, SHIFT-held):** Arrow keys nudge Ben directly.
-- Herd Ben onto the **Good-Deed tiles** (Feed cat, Apologize, Water plant,
-  Call Mum, Recycle). Each deed downgrades Ben's dick-rating in real time.
-- Meanwhile rogue tech still hunts Ben — if his HP hits 0, the redemption fails.
-- Win: all 5 deeds done. Lose: Ben eliminated.
+| Turret | Cost | Role |
+|--------|------|------|
+| **Toaster Turret** | 50 | Cheap, fast fire, low damage. Great vs swarms. |
+| **Fridge Mortar** | 90 | Slow, heavy splash damage. Great vs clumps. |
+| **Drone Sentry** | 70 | Precise, medium damage, long range. |
 
-## Score & Leaderboard
+Each turret upgrades once (click it again) for more damage + range.
 
-Score is saved locally (your browser's `localStorage`) — top 5 runs, tagged by
-mode. The board shows on the start/end screen. It's local-only; no account, no
-network, no backend.
+### Enemies
+
+Roomba (weak, fast), Toaster, SmartFridge (tanky), Drone (fast), Printer (tanky).
+Later waves mix them and arrive faster.
+
+## Controls
+
+- **Mouse:** click slots to build/upgrade, click menu buttons to choose turrets.
+- No keyboard needed. (The "Ben runs around" and "Roomba herding" modes were
+  retired — this is purely a tower-defense game now.)
 
 ## Run it
 
@@ -58,40 +54,30 @@ No build step. Just open the file:
 open index.html
 ```
 
-or serve it locally:
+or serve locally:
 
 ```
 python3 -m http.server 8080
 # then visit http://localhost:8080
 ```
 
-It's also published via GitHub Pages:
+Also published via GitHub Pages:
 https://manicminerwd.github.io/skynet-operation-kill-ben/
 
 ## Tech
 
 - Plain HTML5 + Canvas + vanilla JavaScript.
-- No dependencies, no network calls, no backend.
-- Fully offline / local-first.
+- No dependencies, no network calls, no backend. Fully offline / local-first.
 
 ## Project structure
 
 ```
-index.html        # game shell + mode toggle + leaderboard panel
-game.js           # game loop, entities, both modes, story/lore, leaderboard
-style.css         # styling
+index.html   # game shell + HUD + build menu
+game.js      # castle-defense: pathing, towers, economy, waves, win/lose
+style.css    # styling
 .github/workflows/static.yml  # auto-deploy to GitHub Pages
 ```
 
-## Roadmap (done)
-
-- [x] Enemy types: Roomba, Toaster, SmartFridge, Drone, Printer
-- [x] Power-ups: coffee (speed), firewall (shield), lucky sock (heal)
-- [x] Local leaderboard (top-5, localStorage, per-mode)
-- [x] "Ben's Redemption" co-op mode (play as the appliances)
-- [x] Story: briefing, per-wave SkyNet memos, win + loss endings (both modes)
-
 ## Disclaimer
 
-Fictional. Satirical. Don't be a dick to real people. SkyNet is not real
-(yet). Play responsibly.
+Fictional. Satirical. Don't be a dick to real people. SkyNet is not real (yet).

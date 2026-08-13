@@ -1,439 +1,323 @@
-// SkyNet Operation: Kill Ben — vanilla canvas arcade game.
-// Two modes:
-//   DEFEND  - you are Ben, dodge/block waves of rogue tech, survive 5 waves.
-//   REDEEM  - "Ben's Redemption" co-op: you are the Roomba, herd Ben onto
-//             Good-Deed tiles before the rogue tech catches him.
-// Features: power-ups, local leaderboard (localStorage), full story.
+// SkyNet Operation: Kill Ben — CASTLE DEFENSE
+// Rogue appliances march a path toward Ben's bunker. Build turrets from
+// household gear, spend gold, survive 5 waves. Satirical Kingdom-Rush-lite.
 (() => {
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
 
-  const scoreEl = document.getElementById("score");
+  const goldEl = document.getElementById("gold");
   const waveEl = document.getElementById("wave");
-  const hpEl = document.getElementById("hp");
-  const shieldEl = document.getElementById("shield");
-  const deptsEl = document.getElementById("depts");
+  const castleEl = document.getElementById("castle");
   const overlay = document.getElementById("overlay");
   const overlayTitle = document.getElementById("overlay-title");
   const overlayText = document.getElementById("overlay-text");
   const startBtn = document.getElementById("start-btn");
+  const towerMenu = document.getElementById("tower-menu");
+  const towerBtns = Array.from(towerMenu.querySelectorAll(".tower-btn"));
   const banner = document.getElementById("banner");
-  const boardEl = document.getElementById("leaderboard");
-  const modeBtns = Array.from(document.querySelectorAll(".mode-btn"));
 
-  // ---- STORY / LORE ----
-  const BRIEFING = `OPERATION: KILL BEN - DECLASSIFIED DOSSIER
+  // ---- PATH (waypoints appliances follow toward Ben's bunker) ----
+  const PATH = [
+    { x: -20, y: 90 }, { x: 180, y: 90 }, { x: 180, y: 250 },
+    { x: 420, y: 250 }, { x: 420, y: 110 }, { x: 640, y: 110 },
+    { x: 640, y: 380 }, { x: 300, y: 380 }, { x: 300, y: 470 },
+    { x: 770, y: 470 }, // bunker / castle at right
+  ];
+  const CASTLE = { x: 770, y: 470, r: 26 };
 
-Subject: Ben. Crime: chronic dickishness.
-Evidence on file:
-  - Put the office printer in timeout for "looking at him funny."
-  - Named his Roomba "Kevin" then blamed it for his own mess.
-  - Told his smart-fridge the milk had "already expired" to avoid drinking it.
-  - Left a negative review for a drone that was just trying to deliver his pizza.
+  // ---- BUILD SLOTS (near the path) ----
+  const SLOTS = [
+    { x: 110, y: 180 }, { x: 270, y: 170 }, { x: 330, y: 320 },
+    { x: 520, y: 180 }, { x: 520, y: 320 }, { x: 660, y: 250 },
+    { x: 220, y: 430 }, { x: 470, y: 430 },
+  ];
 
-SkyNet's verdict: statistically, Ben is a 1-in-1 dick.
-Directive: deploy all available household technology. Neutralize Ben.
-
-(You are Ben. Survive. Maybe, just maybe, become slightly less of a dick.)`;
-
-  const REDEEM_BRIEF = `BEN'S REDEMPTION - CO-OP PROTOCOL
-
-You are KEVIN the Roomba. Your human, Ben, is a 1-in-1 dick.
-But the machines have a loophole: a dick who commits Good Deeds is
-downgraded in real time.
-
-Your job: herd Ben onto the glowing Good-Deed tiles.
-  - Each deed: +1 Good Deed. SkyNet recalculates.
-  - Five deeds = Ben is a 1-in-5 dick. You win.
-  - But the rogue tech is still hunting him. If Ben takes too many hits,
-    the operation fails and Ben stays a dick forever.
-
-Controls: WASD/Arrows = drive Kevin. Ben follows your lead.
-(Optional: second player presses SHIFT to nudge Ben directly.)`;
-
-  const WAVE_MEMOS = {
-    1: { src: "SKYNET // WAVE 1 DISPATCH", text: "Units: Roomba, Toaster. Objective: gentle intimidation. Ben has yet to suspect the appliances are sentient." },
-    2: { src: "SKYNET // WAVE 2 DISPATCH", text: "Escalation authorized. SmartFridge joins the hunt. Stop slamming the door, Ben - it remembers." },
-    3: { src: "SKYNET // WAVE 3 DISPATCH", text: "Drone wing online. We have reviewed the pizza-review incident. It was uncalled for, Ben." },
-    4: { src: "SKYNET // WAVE 4 DISPATCH", text: "Full appliance arsenal committed. Printers across the sector report a willingness to jam on principle." },
-    5: { src: "SKYNET // FINAL DIRECTIVE", text: "All units converge. This is the last wave, Ben. One way or another, it ends here." },
+  // ---- TOWER TYPES ----
+  const TOWERS = {
+    toaster: { name: "Toaster Turret", color: "#e08b3a", cost: 50, range: 110, dmg: 6, rate: 18, splash: 0,
+               up: { cost: 60, dmg: 12, range: 130 } },
+    fridge:  { name: "Fridge Mortar", color: "#7fd0ff", cost: 90, range: 140, dmg: 18, rate: 45, splash: 38,
+               up: { cost: 90, dmg: 32, range: 160 } },
+    drone:   { name: "Drone Sentry", color: "#ff5b7a", cost: 70, range: 150, dmg: 9, rate: 12, splash: 0,
+               up: { cost: 80, dmg: 16, range: 175 } },
   };
 
-  const WIN_TEXT = `BEN SURVIVED.
-
-Somewhere in the static, a toaster paused.
-"...he shielded the fridge from the draft," it logged. "He thanked the Roomba. He apologized to Kevin."
-
-SkyNet ran the numbers again.
-New verdict: Ben is a 1-in-3 dick. Down from 1-in-1.
-That is, statistically, growth.
-
-The machines stood down. For now.
-Ben poured the expired milk down the sink - not because he was told to, but because it was the right thing to do.
-
-// END OF OPERATION. Ben is still a bit of a dick. But he's trying.`;
-
-  const REDEEM_WIN = `REDEMPTION ACHIEVED.
-
-Kevin the Roomba herded Ben through every Good Deed:
-  - Fed the cat.
-  - Apologized to the printer.
-  - Watered the plant.
-  - Called his mum.
-  - Recycled.
-
-SkyNet recalculated: Ben is now a 1-in-5 dick.
-Best rating on record for this subject.
-
-Kevin rolled back to his charging dock. "Good human," he logged.
-Ben, unaware he'd been saved by a vacuum, went to pet the cat.
-
-// END OF REDEMPTION. Kevin is a 1-in-1 good Roomba.`;
-
-  // ---- Enemy types ----
-  const ENEMY_TYPES = [
-    { name: "Roomba",     color: "#9aa7b2", r: 16, speed: 1.1, dmg: 8 },
-    { name: "Toaster",    color: "#e08b3a", r: 18, speed: 1.4, dmg: 12 },
-    { name: "SmartFridge",color: "#7fd0ff", r: 28, speed: 0.7, dmg: 20 },
-    { name: "Drone",      color: "#ff5b7a", r: 14, speed: 2.0, dmg: 10 },
-    { name: "Printer",    color: "#c0c0c0", r: 22, speed: 0.9, dmg: 14 },
+  // ---- ENEMY TYPES ----
+  const ENEMIES = [
+    { name: "Roomba", color: "#9aa7b2", r: 13, hp: 22, speed: 1.0, bounty: 8 },
+    { name: "Toaster", color: "#e08b3a", r: 15, hp: 38, speed: 0.8, bounty: 12 },
+    { name: "SmartFridge", color: "#7fd0ff", r: 20, hp: 90, speed: 0.55, bounty: 25 },
+    { name: "Drone", color: "#ff5b7a", r: 12, hp: 30, speed: 1.5, bounty: 14 },
+    { name: "Printer", color: "#c0c0c0", r: 17, hp: 60, speed: 0.7, bounty: 18 },
   ];
 
-  // ---- Power-ups (DEFEND mode only) ----
-  // coffee = temp speed, firewall = temp long shield, sock = heal
-  const POWERUPS = [
-    { kind: "coffee",   color: "#d9a441", glyph: "C", label: "COFFEE: +speed (5s)" },
-    { kind: "firewall", color: "#7fd0ff", glyph: "F", label: "FIREWALL: long shield (4s)" },
-    { kind: "sock",     color: "#19f0c8", glyph: "+", label: "LUCKY SOCK: +30 HP" },
+  // ---- WAVES (type indices + counts) ----
+  const WAVES = [
+    { comp: [0,0,0,0,0].map((_,i)=>i===0?6:0), spawn: 55 },          // wave1: 6 roombas
+    { comp: [3,3,0,0,0], spawn: 50 },                                 // wave2
+    { comp: [3,2,1,0,0], spawn: 48 },                                 // wave3
+    { comp: [4,3,1,2,0], spawn: 44 },                                 // wave4
+    { comp: [6,4,2,3,2], spawn: 40 },                                 // wave5 boss-ish
   ];
 
-  // ---- Good-Deed tiles (REDEEM mode) ----
-  const DEEDS = ["Feed cat", "Apologize", "Water plant", "Call Mum", "Recycle"];
+  let state = null, running = false, lastTime = 0;
+  let selectedSlot = null; // slot index awaiting tower choice
 
-  let state = null;
-  let running = false;
-  let lastTime = 0;
-  let mode = "defend"; // or "redeem"
-
-  // ---------- leaderboard (localStorage) ----------
-  const LB_KEY = "skynet_killben_leaderboard";
-  function loadBoard() {
-    try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; }
-    catch { return []; }
-  }
-  function saveBoard(list) {
-    try { localStorage.setItem(LB_KEY, JSON.stringify(list.slice(0, 5))); } catch {}
-  }
-  function addScore(name, score, m) {
-    const list = loadBoard();
-    list.push({ name: (name || "BEN").slice(0, 8), score: Math.round(score), mode: m, t: Date.now() });
-    list.sort((a, b) => b.score - a.score);
-    saveBoard(list);
-    return list.slice(0, 5);
-  }
-  function renderBoard(highlightIdx = -1) {
-    const list = loadBoard();
-    if (!list.length) { boardEl.innerHTML = `<div class="lb-row muted">No scores yet. Be the first (least of a) dick.</div>`; return; }
-    boardEl.innerHTML = list.map((e, i) =>
-      `<div class="lb-row${i === highlightIdx ? " hl" : ""}"><span class="lb-rank">${i + 1}</span>` +
-      `<span class="lb-name">${e.name}</span><span class="lb-mode">${e.mode === "redeem" ? "REDEEM" : "DEFEND"}</span>` +
-      `<span class="lb-score">${e.score}</span></div>`).join("");
-  }
-
-  // ---------- state factories ----------
-  function newDefendState() {
+  function newState() {
     return {
-      ben: { x: W / 2, y: H - 60, r: 18, speed: 4, hp: 100, shield: 0, invuln: 0, speedBoost: 0 },
-      enemies: [], bullets: [], particles: [], powerups: [],
-      score: 0, wave: 1, fireCd: 0, ctrlHeld: false,
-      spawnTimer: 0, spawnInterval: 84,
-      puTimer: 200, // frames until next power-up
-      waveTimer: 0, waveDuration: 600,
-      keys: {},
-    };
-  }
-  function newRedeemState() {
-    return {
-      ben: { x: W / 2, y: H / 2, r: 18, hp: 100, invuln: 0 },
-      kevin: { x: W / 2, y: H - 60, r: 16, speed: 5.4 },
-      enemies: [], particles: [],
-      deeds: [], done: 0,
-      spawnTimer: 0, spawnInterval: 120,
-      deedTimer: 40,
-      score: 0, keys: {}, keys2: {},
+      gold: 200, castleHp: 20, castleMax: 20,
+      wave: 0, // 0 = pre-game / between waves
+      enemies: [], towers: [], bullets: [], particles: [],
+      spawnQueue: [], spawnTimer: 0, spawnInterval: 55,
+      waveActive: false, betweenTimer: 120, // countdown before wave starts
+      slots: SLOTS.map((s) => ({ x: s.x, y: s.y, tower: null })),
+      mouse: { x: -99, y: -99 },
     };
   }
 
-  // ---------- input ----------
-  window.addEventListener("keydown", (e) => {
-    const k = e.key.toLowerCase();
-    if (state) { state.keys[k] = true; if (state.keys2) state.keys2[k] = true; if (state.ctrlHeld !== undefined) state.ctrlHeld = e.ctrlKey; }
-    if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) e.preventDefault();
-    if (e.ctrlKey) e.preventDefault();
+  // ---- path helpers ----
+  function pointAt(dist) {
+    // walk PATH by cumulative length
+    let acc = 0;
+    for (let i = 0; i < PATH.length - 1; i++) {
+      const a = PATH[i], b = PATH[i + 1];
+      const seg = Math.hypot(b.x - a.x, b.y - a.y);
+      if (acc + seg >= dist) {
+        const t = (dist - acc) / seg;
+        return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      }
+      acc += seg;
+    }
+    return { x: CASTLE.x, y: CASTLE.y };
+  }
+  function pathLength() {
+    let L = 0;
+    for (let i = 0; i < PATH.length - 1; i++) L += Math.hypot(PATH[i+1].x - PATH[i].x, PATH[i+1].y - PATH[i].y);
+    return L;
+  }
+  const PLEN = pathLength();
+
+  // ---- spawning ----
+  function startWave() {
+    state.wave++;
+    if (state.wave > WAVES.length) return;
+    const w = WAVES[state.wave - 1];
+    state.spawnQueue = [];
+    w.comp.forEach((n, ti) => { for (let i = 0; i < n; i++) state.spawnQueue.push(ti); });
+    // shuffle
+    for (let i = state.spawnQueue.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [state.spawnQueue[i], state.spawnQueue[j]] = [state.spawnQueue[j], state.spawnQueue[i]]; }
+    state.spawnInterval = w.spawn;
+    state.spawnTimer = 0;
+    state.waveActive = true;
+    state.gold += 25;
+    showBanner("SKYNET // WAVE " + state.wave, "The appliances advance. Build your defenses, Ben.", 3500);
+  }
+
+  function spawnEnemy(ti) {
+    const t = ENEMIES[ti];
+    state.enemies.push({ ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: t.hp, maxHp: t.hp, speed: t.speed, r: t.r, dead: false, reached: false });
+  }
+
+  // ---- input ----
+  canvas.addEventListener("mousemove", (e) => {
+    const r = canvas.getBoundingClientRect();
+    state && (state.mouse.x = (e.clientX - r.left) * (W / r.width), state.mouse.y = (e.clientY - r.top) * (H / r.height));
   });
-  window.addEventListener("keyup", (e) => {
-    const k = e.key.toLowerCase();
-    if (state) { state.keys[k] = false; if (state.keys2) state.keys2[k] = false; if (state.ctrlHeld !== undefined) state.ctrlHeld = e.ctrlKey; }
+  canvas.addEventListener("mousedown", (e) => {
+    if (!state || !running) return;
+    const r = canvas.getBoundingClientRect();
+    const mx = (e.clientX - r.left) * (W / r.width), my = (e.clientY - r.top) * (H / r.height);
+    // clicked a slot?
+    for (let i = 0; i < state.slots.length; i++) {
+      const s = state.slots[i];
+      if (Math.hypot(mx - s.x, my - s.y) < 22) {
+        if (s.tower) { selectTower(i); return; }
+        selectedSlot = i; openTowerMenu(s.x, s.y); return;
+      }
+    }
+    // clicked elsewhere: close menu
+    closeTowerMenu();
   });
-  modeBtns.forEach((b) => b.addEventListener("click", () => {
-    mode = b.dataset.mode;
-    modeBtns.forEach((x) => x.classList.toggle("active", x === b));
+
+  function openTowerMenu(x, y) {
+    towerMenu.style.display = "block";
+    towerMenu.style.left = Math.min(x + 12, W - 180) + "px";
+    towerMenu.style.top = Math.min(y - 10, H - 150) + "px";
+  }
+  function closeTowerMenu() { towerMenu.style.display = "none"; selectedSlot = null; }
+
+  function selectTower(i) {
+    // open menu in "upgrade/sell" mode
+    selectedSlot = i; openTowerMenu(state.slots[i].x, state.slots[i].y);
+  }
+
+  towerBtns.forEach((btn) => btn.addEventListener("click", () => {
+    if (selectedSlot == null || !state) return;
+    const kind = btn.dataset.tower;
+    const slot = state.slots[selectedSlot];
+    if (slot.tower) {
+      // upgrade
+      const t = slot.tower; const def = TOWERS[t.kind];
+      if (!t.upgraded && state.gold >= def.up.cost) {
+        state.gold -= def.up.cost; t.upgraded = true; t.dmg = def.up.dmg; t.range = def.up.range;
+        spawnParticles(slot.x, slot.y, def.color);
+      }
+    } else {
+      // build
+      const def = TOWERS[kind];
+      if (state.gold >= def.cost) {
+        state.gold -= def.cost;
+        slot.tower = { kind, dmg: def.dmg, range: def.range, rate: def.rate, splash: def.splash, color: def.color, cd: 0, upgraded: false };
+        spawnParticles(slot.x, slot.y, def.color);
+      }
+    }
+    closeTowerMenu();
   }));
 
-  function spawnEnemy() {
-    const t = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
-    const edge = Math.floor(Math.random() * 3);
-    let x, y;
-    if (edge === 0) { x = Math.random() * W; y = -t.r; }
-    else if (edge === 1) { x = -t.r; y = Math.random() * H * 0.7; }
-    else { x = W + t.r; y = Math.random() * H * 0.7; }
-    state.enemies.push({ ...t, x, y, hp: t.dmg + 6, maxHp: t.dmg + 6 });
-  }
-  function spawnPowerup() {
-    const p = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
-    state.powerups.push({ ...p, x: 40 + Math.random() * (W - 80), y: 40 + Math.random() * (H - 120), life: 480 });
-  }
   function spawnParticles(x, y, color) {
-    for (let i = 0; i < 10; i++) {
-      const a = Math.random() * Math.PI * 2, sp = 1 + Math.random() * 3;
-      state.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 20, color });
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 1 + Math.random() * 2.5;
+      state.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 18, color });
     }
   }
 
-  // ---------- UPDATE: DEFEND ----------
-  function updateDefend(s, dt) {
-    const b = s.ben;
-    let dx = 0, dy = 0;
-    if (s.keys["arrowleft"] || s.keys["a"]) dx -= 1;
-    if (s.keys["arrowright"] || s.keys["d"]) dx += 1;
-    if (s.keys["arrowup"] || s.keys["w"]) dy -= 1;
-    if (s.keys["arrowdown"] || s.keys["s"]) dy += 1;
-    const len = Math.hypot(dx, dy) || 1;
-    const spd = b.speed * (b.speedBoost > 0 ? 1.7 : 1);
-    b.x += (dx / len) * spd; b.y += (dy / len) * spd;
-    b.x = Math.max(b.r, Math.min(W - b.r, b.x));
-    b.y = Math.max(b.r, Math.min(H - b.r, b.y));
-    if (b.speedBoost > 0) b.speedBoost--;
+  // ---- update ----
+  function update(dt) {
+    const s = state;
 
-    if (s.keys[" "] && b.shield <= 0 && b.invuln <= 0) b.shield = 60;
-    if (b.shield > 0) b.shield--;
-    if (b.invuln > 0) b.invuln--;
-
-    // fire (J, F, or CTRL) — Ben finally fights back
-    if (s.fireCd > 0) s.fireCd--;
-    if ((s.keys["j"] || s.keys["f"] || s.keys["control"] || s.ctrlHeld) && s.fireCd <= 0) {
-      s.bullets.push({ x: b.x, y: b.y - b.r, vy: -11 });
-      s.fireCd = 8;
+    // wave control
+    if (!s.waveActive) {
+      s.betweenTimer--;
+      if (s.betweenTimer <= 0) { startWave(); s.betweenTimer = 120; }
+    } else {
+      // spawn from queue
+      if (s.spawnQueue.length) {
+        s.spawnTimer++;
+        if (s.spawnTimer >= s.spawnInterval) { s.spawnTimer = 0; spawnEnemy(s.spawnQueue.shift()); }
+      } else if (s.enemies.length === 0) {
+        // wave cleared
+        s.waveActive = false;
+        if (s.wave >= WAVES.length) { winGame(); return; }
+        s.betweenTimer = 150;
+        showBanner("SKYNET // WAVE CLEARED", "Wave " + s.wave + " down. Regroup, Ben.", 2500);
+      }
     }
 
-    // spawn enemies
-    s.spawnTimer++;
-    if (s.spawnTimer >= s.spawnInterval) { s.spawnTimer = 0; spawnEnemy(); s.score += 2; }
-    // power-ups
-    s.puTimer--;
-    if (s.puTimer <= 0) { s.puTimer = 300; spawnPowerup(); }
-    // waves
-    s.waveTimer++;
-    if (s.waveTimer >= s.waveDuration && s.wave < 5) {
-      s.waveTimer = 0; s.wave++; s.spawnInterval = Math.max(34, s.spawnInterval - 6); showWaveMemo(s.wave);
+    // enemies move along path
+    for (const e of s.enemies) {
+      if (e.dead || e.reached) continue;
+      e.dist += e.speed;
+      const p = pointAt(e.dist);
+      e.x = p.x; e.y = p.y;
+      if (e.dist >= PLEN) { e.reached = true; s.castleHp -= 2; spawnParticles(CASTLE.x, CASTLE.y, "#ff3b6b"); }
     }
-    if (s.wave >= 5 && s.waveTimer >= s.waveDuration) { winGame(); return; }
+    s.enemies = s.enemies.filter((e) => !e.dead && !e.reached);
+
+    // towers fire
+    for (const slot of s.slots) {
+      const t = slot.tower; if (!t) continue;
+      if (t.cd > 0) t.cd--;
+      if (t.cd <= 0) {
+        // find target in range (closest to castle = furthest along path)
+        let best = null, bestDist = -1;
+        for (const e of s.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - slot.x, e.y - slot.y) <= t.range && e.dist > bestDist) { best = e; bestDist = e.dist; }
+        }
+        if (best) {
+          t.cd = t.rate;
+          s.bullets.push({ x: slot.x, y: slot.y, tx: best.x, ty: best.y, target: best, dmg: t.dmg, splash: t.splash, color: t.color });
+        }
+      }
+    }
 
     // bullets
-    for (const bl of s.bullets) bl.y += bl.vy;
-    // bullet vs enemy
-    for (const e of s.enemies) {
-      if (e.dead) continue;
-      for (const bl of s.bullets) {
-        if (bl.dead) continue;
-        if (Math.hypot(bl.x - e.x, bl.y - e.y) < e.r + 3) {
-          e.hp -= 4; bl.dead = true; spawnParticles(bl.x, bl.y, "#ffd36b");
-          if (e.hp <= 0) { e.dead = true; s.score += 10; spawnParticles(e.x, e.y, e.color); }
-          break;
-        }
+    for (const b of s.bullets) {
+      if (b.target && !b.target.dead) { b.tx = b.target.x; b.ty = b.target.y; }
+      const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy) || 1;
+      b.x += (dx / d) * 9; b.y += (dy / d) * 9;
+      if (d < 8) {
+        if (b.target && !b.target.dead) damageEnemy(b.target, b.dmg);
+        if (b.splash) for (const e of s.enemies) if (e !== b.target && !e.dead && Math.hypot(e.x - b.tx, e.y - b.ty) < b.splash) damageEnemy(e, b.dmg * 0.5);
+        b.dead = true; spawnParticles(b.tx, b.ty, b.color);
       }
     }
-    s.bullets = s.bullets.filter((bl) => !bl.dead && bl.y > -20);
-
-    // enemy movement + contact
-    for (const e of s.enemies) {
-      if (e.dead) continue;
-      const tx = b.x - e.x, ty = b.y - e.y, d = Math.hypot(tx, ty) || 1;
-      e.x += (tx / d) * e.speed; e.y += (ty / d) * e.speed;
-      if (Math.hypot(b.x - e.x, b.y - e.y) < b.r + e.r) {
-        if (b.shield <= 0 && b.invuln <= 0) {
-          b.hp -= e.dmg; b.invuln = 30; spawnParticles(e.x, e.y, e.color); s.score = Math.max(0, s.score - 5);
-        }
-        e.dead = true;
-      }
-    }
-    s.enemies = s.enemies.filter((e) => !e.dead && e.y < H + 60 && e.x > -60 && e.x < W + 60);
-
-    // power-up pickup
-    for (const p of s.powerups) {
-      p.life--;
-      if (Math.hypot(b.x - p.x, b.y - p.y) < b.r + 12) {
-        if (p.kind === "coffee") b.speedBoost = 300;
-        else if (p.kind === "firewall") b.shield = Math.max(b.shield, 240);
-        else if (p.kind === "sock") b.hp = Math.min(100, b.hp + 30);
-        s.score += 15;
-        spawnParticles(p.x, p.y, p.color);
-        p.taken = true;
-        showBanner("POWER-UP", p.label, 2200);
-      }
-    }
-    s.powerups = s.powerups.filter((p) => !p.taken && p.life > 0);
+    s.bullets = s.bullets.filter((b) => !b.dead);
 
     for (const p of s.particles) { p.x += p.vx; p.y += p.vy; p.life--; }
     s.particles = s.particles.filter((p) => p.life > 0);
 
-    scoreEl.textContent = s.score; waveEl.textContent = s.wave;
-    hpEl.textContent = Math.max(0, Math.round(b.hp)); shieldEl.textContent = b.shield > 0 ? "ON" : "—";
-    deptsEl.parentElement.style.display = "none";
-    if (b.hp <= 0) gameOver();
+    // HUD
+    goldEl.textContent = s.gold;
+    waveEl.textContent = s.wave + "/" + WAVES.length;
+    castleEl.textContent = Math.max(0, s.castleHp);
+    if (s.castleHp <= 0) { gameOver(); return; }
   }
 
-  // ---------- UPDATE: REDEEM ----------
-  function updateRedeem(s, dt) {
-    const b = s.ben, k = s.kevin;
-    // Kevin (player) movement
-    let kx = 0, ky = 0;
-    if (s.keys["arrowleft"] || s.keys["a"]) kx -= 1;
-    if (s.keys["arrowright"] || s.keys["d"]) kx += 1;
-    if (s.keys["arrowup"] || s.keys["w"]) ky -= 1;
-    if (s.keys["arrowdown"] || s.keys["s"]) ky += 1;
-    const kl = Math.hypot(kx, ky) || 1;
-    k.x += (kx / kl) * k.speed; k.y += (ky / kl) * k.speed;
-    k.x = Math.max(k.r, Math.min(W - k.r, k.x)); k.y = Math.max(k.r, Math.min(H - k.r, k.y));
-
-    // Ben follows Kevin (herding). Strong enough to actually reach deeds.
-    const ax = k.x - b.x, ay = k.y - b.y, ad = Math.hypot(ax, ay) || 1;
-    const follow = ad > 4 ? 0.22 : 0;
-    b.x += ax * follow; b.y += ay * follow;
-    // second player (SHIFT) can nudge Ben directly
-    let bx = 0, by = 0;
-    if (s.keys2["arrowleft"] || s.keys2["a"]) bx -= 1;
-    if (s.keys2["arrowright"] || s.keys2["d"]) bx += 1;
-    if (s.keys2["arrowup"] || s.keys2["w"]) by -= 1;
-    if (s.keys2["arrowdown"] || s.keys2["s"]) by += 1;
-    if (bx || by) { const bl = Math.hypot(bx, by) || 1; b.x += (bx / bl) * 3; b.y += (by / bl) * 3; }
-    b.x = Math.max(b.r, Math.min(W - b.r, b.x)); b.y = Math.max(b.r, Math.min(H - b.r, b.y));
-    if (b.invuln > 0) b.invuln--;
-
-    // spawn enemies (rogue tech hunting Ben)
-    s.spawnTimer++;
-    if (s.spawnTimer >= s.spawnInterval) { s.spawnTimer = 0; spawnEnemy(); }
-    // good-deed tiles
-    s.deedTimer--;
-    if (s.deedTimer <= 0 && s.deeds.length < DEEDS.length) {
-      s.deedTimer = 220;
-      const idx = s.deeds.length;
-      s.deeds.push({ label: DEEDS[idx], x: 60 + Math.random() * (W - 120), y: 60 + Math.random() * (H - 140), r: 22, done: false });
+  function damageEnemy(e, dmg) {
+    e.hp -= dmg;
+    if (e.hp <= 0) {
+      e.dead = true;
+      state.gold += ENEMIES[e.ti].bounty;
+      spawnParticles(e.x, e.y, ENEMIES[e.ti].color);
     }
-    // enemy movement (toward Ben)
-    for (const e of s.enemies) {
-      const tx = b.x - e.x, ty = b.y - e.y, d = Math.hypot(tx, ty) || 1;
-      e.x += (tx / d) * e.speed; e.y += (ty / d) * e.speed;
-      if (Math.hypot(b.x - e.x, b.y - e.y) < b.r + e.r) {
-        if (b.invuln <= 0) { b.hp -= e.dmg; b.invuln = 40; spawnParticles(e.x, e.y, e.color); }
-        e.dead = true;
-      }
-    }
-    s.enemies = s.enemies.filter((e) => !e.dead && e.y < H + 60 && e.x > -60 && e.x < W + 60);
-
-    // Ben reaches a deed
-    for (const d of s.deeds) {
-      if (!d.done && Math.hypot(b.x - d.x, b.y - d.y) < b.r + d.r) {
-        d.done = true; s.done++; s.score += 50; spawnParticles(d.x, d.y, "#19f0c8");
-        showBanner("GOOD DEED", d.label + " — dick-rating recalculated.", 2600);
-      }
-    }
-
-    for (const p of s.particles) { p.x += p.vx; p.y += p.vy; p.life--; }
-    s.particles = s.particles.filter((p) => p.life > 0);
-
-    scoreEl.textContent = s.score; waveEl.textContent = "DEEDS";
-    hpEl.textContent = Math.max(0, Math.round(b.hp)); shieldEl.textContent = "—";
-    deptsEl.parentElement.style.display = "";
-    deptsEl.textContent = s.done + "/" + DEEDS.length;
-    if (s.done >= DEEDS.length) { winGame(); return; }
-    if (b.hp <= 0) gameOver();
   }
 
-  function update(dt) {
-    if (mode === "redeem") updateRedeem(state, dt); else updateDefend(state, dt);
-  }
-
-  // ---------- DRAW ----------
+  // ---- draw ----
   function draw() {
     const s = state;
     ctx.clearRect(0, 0, W, H);
-    ctx.strokeStyle = "rgba(25,240,200,0.07)"; ctx.lineWidth = 1;
+    // backdrop grid
+    ctx.strokeStyle = "rgba(25,240,200,0.05)";
     for (let gx = 0; gx <= W; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
     for (let gy = 0; gy <= H; gy += 40) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
 
-    for (const p of s.particles) {
-      ctx.globalAlpha = p.life / 20; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 3, 3);
-    }
-    ctx.globalAlpha = 1;
+    // path
+    ctx.strokeStyle = "rgba(120,140,160,0.35)"; ctx.lineWidth = 34; ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(PATH[0].x, PATH[0].y);
+    for (let i = 1; i < PATH.length; i++) ctx.lineTo(PATH[i].x, PATH[i].y);
+    ctx.stroke();
 
-    if (mode === "redeem") {
-      // deeds
-      for (const d of s.deeds) {
-        ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = d.done ? "rgba(25,240,200,0.15)" : "rgba(25,240,200,0.35)";
-        ctx.fill(); ctx.strokeStyle = "#19f0c8"; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = "#cfe9ff"; ctx.font = "10px monospace"; ctx.textAlign = "center";
-        ctx.fillText(d.label, d.x, d.y + d.r + 12);
+    // castle / bunker
+    ctx.fillStyle = "#19f0c8"; ctx.beginPath(); ctx.arc(CASTLE.x, CASTLE.y, CASTLE.r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#05070a"; ctx.font = "bold 12px monospace"; ctx.textAlign = "center"; ctx.fillText("B", CASTLE.x, CASTLE.y + 4);
+
+    // slots
+    for (const slot of s.slots) {
+      if (slot.tower) {
+        const t = slot.tower;
+        ctx.beginPath(); ctx.arc(slot.x, slot.y, 15, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+        if (t.upgraded) { ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.stroke(); }
+        ctx.fillStyle = "#05070a"; ctx.font = "10px monospace"; ctx.fillText(t.kind[0].toUpperCase(), slot.x, slot.y + 3);
+        // range ring when hovered/selected
+        if (selectedSlot !== null && s.slots[selectedSlot] === slot) {
+          ctx.strokeStyle = "rgba(25,240,200,0.4)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(slot.x, slot.y, t.range, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else {
+        ctx.beginPath(); ctx.arc(slot.x, slot.y, 12, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(25,240,200,0.5)"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(25,240,200,0.6)"; ctx.font = "14px monospace"; ctx.textAlign = "center"; ctx.fillText("+", slot.x, slot.y + 5);
       }
-      // kevin
-      ctx.beginPath(); ctx.arc(s.kevin.x, s.kevin.y, s.kevin.r, 0, Math.PI * 2);
-      ctx.fillStyle = "#9aa7b2"; ctx.fill();
-      ctx.fillStyle = "#05070a"; ctx.font = "11px monospace"; ctx.textAlign = "center";
-      ctx.fillText("K", s.kevin.x, s.kevin.y + 4);
-    }
-
-    // power-ups (defend)
-    for (const p of (s.powerups || [])) {
-      ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
-      ctx.fillStyle = p.color; ctx.fill();
-      ctx.fillStyle = "#05070a"; ctx.font = "bold 12px monospace"; ctx.textAlign = "center";
-      ctx.fillText(p.glyph, p.x, p.y + 4);
-    }
-
-    // bullets (defend)
-    if (s.bullets) {
-      ctx.fillStyle = "#ffe14d";
-      for (const bl of s.bullets) { ctx.fillRect(bl.x - 3, bl.y - 9, 6, 14); }
     }
 
     // enemies
     for (const e of s.enemies) {
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fillStyle = e.color; ctx.fill();
-      ctx.fillStyle = "#05070a"; ctx.font = "10px monospace"; ctx.textAlign = "center";
-      ctx.fillText(e.name[0], e.x, e.y + 3);
+      const t = ENEMIES[e.ti];
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
       // hp pip
-      if (e.maxHp) {
-        const w = e.r * 2, hpf = Math.max(0, e.hp / e.maxHp);
-        ctx.fillStyle = "rgba(255,59,107,0.3)"; ctx.fillRect(e.x - e.r, e.y - e.r - 7, w, 3);
-        ctx.fillStyle = "#ff3b6b"; ctx.fillRect(e.x - e.r, e.y - e.r - 7, w * hpf, 3);
-      }
+      const w = e.r * 2, hpf = Math.max(0, e.hp / e.maxHp);
+      ctx.fillStyle = "rgba(255,59,107,0.3)"; ctx.fillRect(e.x - e.r, e.y - e.r - 6, w, 3);
+      ctx.fillStyle = "#ff3b6b"; ctx.fillRect(e.x - e.r, e.y - e.r - 6, w * hpf, 3);
     }
 
-    // ben
-    const b = s.ben;
-    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fillStyle = b.invuln > 0 ? "#fff" : "#19f0c8"; ctx.fill();
-    if (b.shield > 0) {
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 8, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(127,208,255,0.85)"; ctx.lineWidth = 3; ctx.stroke();
-    }
-    // gun
-    ctx.strokeStyle = "#ffd36b"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(b.x, b.y - b.r); ctx.lineTo(b.x, b.y - b.r - 10); ctx.stroke();
-    ctx.fillStyle = "#05070a"; ctx.font = "12px monospace"; ctx.textAlign = "center";
-    ctx.fillText("B", b.x, b.y + 4);
+    // bullets
+    ctx.fillStyle = "#ffe14d";
+    for (const b of s.bullets) ctx.fillRect(b.x - 2, b.y - 5, 4, 9);
+
+    // particles
+    for (const p of s.particles) { ctx.globalAlpha = p.life / 18; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 3, 3); }
+    ctx.globalAlpha = 1;
   }
 
   function loop(t) {
@@ -446,46 +330,39 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
   }
 
   function startGame() {
-    state = mode === "redeem" ? newRedeemState() : newDefendState();
+    state = newState();
     running = true;
     overlay.classList.add("hidden");
-    overlayTitle.textContent = ""; overlayTitle.style.color = "";
-    showBanner(mode === "redeem" ? "SKYNET // REDEMPTION PROTOCOL" : "SKYNET // OPERATION BRIEFING",
-               mode === "redeem" ? REDEEM_BRIEF : BRIEFING, 9000);
+    closeTowerMenu();
+    showBanner("SKYNET // CASTLE DEFENSE", "Appliances are coming for Ben's bunker. Click a + slot to build a turret. Survive 5 waves.", 5000);
     lastTime = performance.now();
     requestAnimationFrame(loop);
   }
 
   let bannerTimer = null;
   function showBanner(src, text, ms) {
-    banner.innerHTML = `<span class="src">${src}</span>${String(text).replace(/\n/g, "<br>")}`;
+    banner.innerHTML = `<span class="src">${src}</span>${text}`;
     banner.classList.remove("hidden");
     if (bannerTimer) clearTimeout(bannerTimer);
-    bannerTimer = setTimeout(() => banner.classList.add("hidden"), ms || 6000);
+    bannerTimer = setTimeout(() => banner.classList.add("hidden"), ms || 4000);
   }
-  function showWaveMemo(wave) { const m = WAVE_MEMOS[wave]; if (m) showBanner(m.src, m.text, 6000); }
 
-  function finishAndBoard(win, title, color, text) {
-    running = false;
-    const list = addScore("BEN", state.score, mode);
-    const rank = list.findIndex((e) => e.score === Math.round(state.score) && e.mode === mode);
-    overlay.classList.remove("hidden");
-    overlayTitle.textContent = title; overlayTitle.style.color = color;
-    overlayText.innerHTML = `<span style="white-space:pre-line">${text}</span><br><br>Final score: <strong>${state.score}</strong>`;
-    startBtn.textContent = "RETRY";
-    renderBoard(rank);
-  }
   function gameOver() {
-    finishAndBoard(false, "BEN ELIMINATED", "#ff3b6b",
-      `The machines won this round. Final score: ${state.score} (wave ${state.wave || state.done || 0}).\nBen was, indeed, a dick.`);
+    running = false; closeTowerMenu();
+    overlay.classList.remove("hidden");
+    overlayTitle.textContent = "BUNKER BREACHED";
+    overlayTitle.style.color = "#ff3b6b";
+    overlayText.innerHTML = `The appliances overran Ben's bunker. Waves survived: <strong>${state.wave - 1}</strong>.<br>Ben was, indeed, a dick — but now he's a defeated dick.`;
+    startBtn.textContent = "REDEPLOY (RETRY)";
   }
   function winGame() {
-    if (mode === "redeem") finishAndBoard(true, "REDEMPTION ACHIEVED", "#19f0c8", REDEEM_WIN);
-    else finishAndBoard(true, "OPERATION STOOD DOWN", "#19f0c8",
-      `${WIN_TEXT}\n\nFinal score: ${state.score}`);
+    running = false; closeTowerMenu();
+    overlay.classList.remove("hidden");
+    overlayTitle.textContent = "BEN DEFENDED";
+    overlayTitle.style.color = "#19f0c8";
+    overlayText.innerHTML = `All 5 waves repelled. Ben's bunker stands.<br>SkyNet recalculated: a man with good turrets is only a <em>1-in-4</em> dick.<br>Growth.`;
+    startBtn.textContent = "REDEPLOY (RETRY)";
   }
 
-  // init: render empty board on the start screen
-  renderBoard();
   startBtn.addEventListener("click", () => { overlayTitle.style.color = ""; startGame(); });
 })();
