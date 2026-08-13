@@ -17,6 +17,9 @@
     const im = new Image(); im.src = "enemies/" + n + ".png"; return im;
   });
 
+  // ---- castle sprite (generated castle art) ----
+  const CASTLE_IMG = new Image(); CASTLE_IMG.src = "castle.png";
+
   // ---- turret sprites (generated turret art) ----
   const TOWER_SPRITES = {
     toaster: Object.assign(new Image(), { src: "turrets/toaster.png" }),
@@ -359,8 +362,13 @@
     for (let i = 1; i < PATH.length; i++) ctx.lineTo(PATH[i].x, PATH[i].y);
     ctx.stroke(); ctx.setLineDash([]);
 
-    // castle / bunker (drawn as a small castle)
-    drawCastle(CASTLE.x, CASTLE.y, CASTLE.r);
+    // castle / bunker (sprite, with drawn fallback)
+    const cs = CASTLE.r * 3.4;
+    if (CASTLE_IMG && CASTLE_IMG.complete && CASTLE_IMG.naturalWidth) {
+      ctx.drawImage(CASTLE_IMG, CASTLE.x - cs / 2, CASTLE.y - cs / 2, cs, cs);
+    } else {
+      drawCastle(CASTLE.x, CASTLE.y, CASTLE.r);
+    }
 
     // slots
     for (const slot of s.slots) {
