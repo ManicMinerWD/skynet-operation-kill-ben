@@ -29,7 +29,7 @@ deployed.
 
 ### 1. DEFEND — "you are Ben"
 - Survive 5 waves of rogue tech.
-- **Move:** WASD / Arrow keys. **Block:** Space (temporary shield).
+- **Move:** WASD / Arrow keys. **Block:** Space (temporary shield). **Fire:** J or F (Ben shoots the appliances — they now have HP and a health pip; kills score points).
 - **Power-ups** spawn on the field:
   - ☕ **Coffee** — +speed for 5s.
   - 🛡 **Firewall** — long shield (4s).

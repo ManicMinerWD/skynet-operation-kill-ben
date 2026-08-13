@@ -145,8 +145,8 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
   function newDefendState() {
     return {
       ben: { x: W / 2, y: H - 60, r: 18, speed: 4, hp: 100, shield: 0, invuln: 0, speedBoost: 0 },
-      enemies: [], particles: [], powerups: [],
-      score: 0, wave: 1,
+      enemies: [], bullets: [], particles: [], powerups: [],
+      score: 0, wave: 1, fireCd: 0,
       spawnTimer: 0, spawnInterval: 84,
       puTimer: 200, // frames until next power-up
       waveTimer: 0, waveDuration: 600,
@@ -187,7 +187,7 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
     if (edge === 0) { x = Math.random() * W; y = -t.r; }
     else if (edge === 1) { x = -t.r; y = Math.random() * H * 0.7; }
     else { x = W + t.r; y = Math.random() * H * 0.7; }
-    state.enemies.push({ ...t, x, y });
+    state.enemies.push({ ...t, x, y, hp: t.dmg + 6, maxHp: t.dmg + 6 });
   }
   function spawnPowerup() {
     const p = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
@@ -219,6 +219,13 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
     if (b.shield > 0) b.shield--;
     if (b.invuln > 0) b.invuln--;
 
+    // fire (J or F) — Ben finally fights back
+    if (s.fireCd > 0) s.fireCd--;
+    if ((s.keys["j"] || s.keys["f"]) && s.fireCd <= 0) {
+      s.bullets.push({ x: b.x, y: b.y - b.r, vy: -9 });
+      s.fireCd = 10;
+    }
+
     // spawn enemies
     s.spawnTimer++;
     if (s.spawnTimer >= s.spawnInterval) { s.spawnTimer = 0; spawnEnemy(); s.score += 2; }
@@ -232,8 +239,25 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
     }
     if (s.wave >= 5 && s.waveTimer >= s.waveDuration) { winGame(); return; }
 
-    // enemy movement + collision
+    // bullets
+    for (const bl of s.bullets) bl.y += bl.vy;
+    // bullet vs enemy
     for (const e of s.enemies) {
+      if (e.dead) continue;
+      for (const bl of s.bullets) {
+        if (bl.dead) continue;
+        if (Math.hypot(bl.x - e.x, bl.y - e.y) < e.r + 3) {
+          e.hp -= 4; bl.dead = true; spawnParticles(bl.x, bl.y, "#ffd36b");
+          if (e.hp <= 0) { e.dead = true; s.score += 10; spawnParticles(e.x, e.y, e.color); }
+          break;
+        }
+      }
+    }
+    s.bullets = s.bullets.filter((bl) => !bl.dead && bl.y > -20);
+
+    // enemy movement + contact
+    for (const e of s.enemies) {
+      if (e.dead) continue;
       const tx = b.x - e.x, ty = b.y - e.y, d = Math.hypot(tx, ty) || 1;
       e.x += (tx / d) * e.speed; e.y += (ty / d) * e.speed;
       if (Math.hypot(b.x - e.x, b.y - e.y) < b.r + e.r) {
@@ -377,11 +401,23 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
       ctx.fillText(p.glyph, p.x, p.y + 4);
     }
 
+    // bullets (defend)
+    if (s.bullets) {
+      ctx.fillStyle = "#ffd36b";
+      for (const bl of s.bullets) { ctx.fillRect(bl.x - 2, bl.y - 6, 4, 10); }
+    }
+
     // enemies
     for (const e of s.enemies) {
       ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fillStyle = e.color; ctx.fill();
       ctx.fillStyle = "#05070a"; ctx.font = "10px monospace"; ctx.textAlign = "center";
       ctx.fillText(e.name[0], e.x, e.y + 3);
+      // hp pip
+      if (e.maxHp) {
+        const w = e.r * 2, hpf = Math.max(0, e.hp / e.maxHp);
+        ctx.fillStyle = "rgba(255,59,107,0.3)"; ctx.fillRect(e.x - e.r, e.y - e.r - 7, w, 3);
+        ctx.fillStyle = "#ff3b6b"; ctx.fillRect(e.x - e.r, e.y - e.r - 7, w * hpf, 3);
+      }
     }
 
     // ben
@@ -392,6 +428,9 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 8, 0, Math.PI * 2);
       ctx.strokeStyle = "rgba(127,208,255,0.85)"; ctx.lineWidth = 3; ctx.stroke();
     }
+    // gun
+    ctx.strokeStyle = "#ffd36b"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(b.x, b.y - b.r); ctx.lineTo(b.x, b.y - b.r - 10); ctx.stroke();
     ctx.fillStyle = "#05070a"; ctx.font = "12px monospace"; ctx.textAlign = "center";
     ctx.fillText("B", b.x, b.y + 4);
   }
