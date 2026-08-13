@@ -6,6 +6,12 @@
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
 
+  // ---- background artwork ----
+  const bgImg = new Image();
+  bgImg.src = "bg-green.png"; // high-quality generated green field
+  let bgReady = false;
+  bgImg.onload = () => { bgReady = true; };
+
   const goldEl = document.getElementById("gold");
   const waveEl = document.getElementById("wave");
   const castleEl = document.getElementById("castle");
@@ -284,17 +290,32 @@
   // ---- draw ----
   function draw() {
     const s = state;
-    ctx.clearRect(0, 0, W, H);
-    // backdrop grid
-    ctx.strokeStyle = "rgba(25,240,200,0.05)";
-    for (let gx = 0; gx <= W; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
-    for (let gy = 0; gy <= H; gy += 40) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+    // green field backdrop
+    if (bgReady) {
+      ctx.drawImage(bgImg, 0, 0, W, H);
+    } else {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#1f7a3a"); g.addColorStop(1, "#0f4d24");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
 
-    // path
-    ctx.strokeStyle = "rgba(120,140,160,0.35)"; ctx.lineWidth = 34; ctx.lineJoin = "round"; ctx.lineCap = "round";
+    // gold road (follows the enemies' path exactly)
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    // shadow / dirt edge
+    ctx.strokeStyle = "#7a5a12"; ctx.lineWidth = 40;
     ctx.beginPath(); ctx.moveTo(PATH[0].x, PATH[0].y);
     for (let i = 1; i < PATH.length; i++) ctx.lineTo(PATH[i].x, PATH[i].y);
     ctx.stroke();
+    // gold surface
+    ctx.strokeStyle = "#e8c33a"; ctx.lineWidth = 30;
+    ctx.beginPath(); ctx.moveTo(PATH[0].x, PATH[0].y);
+    for (let i = 1; i < PATH.length; i++) ctx.lineTo(PATH[i].x, PATH[i].y);
+    ctx.stroke();
+    // center dashed line
+    ctx.strokeStyle = "rgba(255,240,160,0.7)"; ctx.lineWidth = 3; ctx.setLineDash([10, 12]);
+    ctx.beginPath(); ctx.moveTo(PATH[0].x, PATH[0].y);
+    for (let i = 1; i < PATH.length; i++) ctx.lineTo(PATH[i].x, PATH[i].y);
+    ctx.stroke(); ctx.setLineDash([]);
 
     // castle / bunker
     ctx.fillStyle = "#19f0c8"; ctx.beginPath(); ctx.arc(CASTLE.x, CASTLE.y, CASTLE.r, 0, Math.PI * 2); ctx.fill();
@@ -312,9 +333,10 @@
           ctx.strokeStyle = "rgba(25,240,200,0.4)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(slot.x, slot.y, t.range, 0, Math.PI * 2); ctx.stroke();
         }
       } else {
-        ctx.beginPath(); ctx.arc(slot.x, slot.y, 12, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(25,240,200,0.5)"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
-        ctx.fillStyle = "rgba(25,240,200,0.6)"; ctx.font = "14px monospace"; ctx.textAlign = "center"; ctx.fillText("+", slot.x, slot.y + 5);
+        ctx.beginPath(); ctx.arc(slot.x, slot.y, 13, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fill();
+        ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = "#ffe14d"; ctx.font = "16px monospace"; ctx.textAlign = "center"; ctx.fillText("+", slot.x, slot.y + 5);
       }
     }
 
