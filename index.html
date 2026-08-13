@@ -10,18 +10,35 @@
   <div id="game-wrap">
     <h1>SKYNET: OPERATION KILL BEN</h1>
     <p class="subtitle">Ben is a dick. The machines have noticed.</p>
+
+    <div id="mode-select">
+      <button class="mode-btn active" data-mode="defend">DEFEND (you are Ben)</button>
+      <button class="mode-btn" data-mode="redeem">REDEEM (you are Kevin the Roomba)</button>
+    </div>
+
     <canvas id="game" width="800" height="500"></canvas>
+
     <div id="hud">
       <span>Score: <strong id="score">0</strong></span>
       <span>Wave: <strong id="wave">1</strong></span>
       <span>HP: <strong id="hp">100</strong></span>
       <span>Shield: <strong id="shield">0</strong></span>
+      <span class="deeds-row">Deeds: <strong id="depts">0/5</strong></span>
     </div>
+
+    <div id="legend">
+      Power-ups: <span class="lg coffee">C coffee (+speed)</span> ·
+      <span class="lg firewall">F firewall (shield)</span> ·
+      <span class="lg sock">+ lucky sock (+30 HP)</span>
+    </div>
+
     <div id="banner" class="hidden"></div>
+
     <div id="overlay">
       <div class="panel">
         <h2 id="overlay-title">SKYNET ONLINE</h2>
         <p id="overlay-text">Defend Ben from the machines. Move: WASD / Arrows. Block: SPACE.</p>
+        <div id="leaderboard"></div>
         <button id="start-btn">DEPLOY BEN</button>
       </div>
     </div>
