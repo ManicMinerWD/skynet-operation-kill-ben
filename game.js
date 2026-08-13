@@ -66,11 +66,11 @@
 
   // ---- ENEMY TYPES ----
   const ENEMIES = [
-    { name: "Roomba", color: "#9aa7b2", r: 13, hp: 22, speed: 1.0, bounty: 8 },
-    { name: "Toaster", color: "#e08b3a", r: 15, hp: 38, speed: 0.8, bounty: 12 },
-    { name: "SmartFridge", color: "#7fd0ff", r: 20, hp: 90, speed: 0.55, bounty: 25 },
-    { name: "Drone", color: "#ff5b7a", r: 12, hp: 30, speed: 1.5, bounty: 14 },
-    { name: "Printer", color: "#c0c0c0", r: 17, hp: 60, speed: 0.7, bounty: 18 },
+    { name: "Roomba", color: "#9aa7b2", r: 13, hp: 30, speed: 1.0, bounty: 5 },
+    { name: "Toaster", color: "#e08b3a", r: 15, hp: 50, speed: 0.8, bounty: 8 },
+    { name: "SmartFridge", color: "#7fd0ff", r: 20, hp: 115, speed: 0.55, bounty: 15 },
+    { name: "Drone", color: "#ff5b7a", r: 12, hp: 40, speed: 1.5, bounty: 9 },
+    { name: "Printer", color: "#c0c0c0", r: 17, hp: 80, speed: 0.7, bounty: 11 },
   ];
 
   // ---- WAVES: 100 escalating levels, generated ----
@@ -103,7 +103,7 @@
 
   function newState() {
     return {
-      gold: 140, castleHp: 15, castleMax: 15,
+      gold: 130, castleHp: 15, castleMax: 15,
       wave: 0, // 0 = pre-game / between waves
       enemies: [], towers: [], bullets: [], particles: [],
       spawnQueue: [], spawnTimer: 0, spawnInterval: 55,
@@ -154,7 +154,7 @@
   function spawnEnemy(ti) {
     const t = ENEMIES[ti];
     const scale = waveScale(state.wave);
-    const e = { ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale), speed: t.speed * (1 + (state.wave - 1) * 0.01), r: t.r, dead: false, reached: false, taunt: null, tauntTimer: 0 };
+    const e = { ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale), shield: Math.round(t.hp * scale * 0.25), maxShield: Math.round(t.hp * scale * 0.25), speed: t.speed * (1 + (state.wave - 1) * 0.01), r: t.r, dead: false, reached: false, taunt: null, tauntTimer: 0 };
     // occasional taunt: ~25% of enemies, pester Ben
     if (Math.random() < 0.25) {
       const lines = ["Ben's a total D", "Ben is mid", "Skill issue, Ben", "L + ratio, Ben", "Ben's a joke", "lol Ben", "Get rekt Ben"];
@@ -302,7 +302,11 @@
   }
 
   function damageEnemy(e, dmg) {
-    e.hp -= dmg;
+    if (e.shield > 0) {
+      const absorbed = Math.min(e.shield, dmg);
+      e.shield -= absorbed; dmg -= absorbed;
+    }
+    if (dmg > 0) e.hp -= dmg;
     if (e.hp <= 0) {
       e.dead = true;
       state.gold += ENEMIES[e.ti].bounty;
@@ -414,6 +418,12 @@
       }
       // hp pip
       const w = e.r * 2, hpf = Math.max(0, e.hp / e.maxHp);
+      // shield pip (above hp)
+      if (e.maxShield > 0) {
+        const shf = Math.max(0, e.shield / e.maxShield);
+        ctx.fillStyle = "rgba(120,210,255,0.3)"; ctx.fillRect(e.x - e.r, e.y - e.r - 10, w, 3);
+        ctx.fillStyle = "#7fd0ff"; ctx.fillRect(e.x - e.r, e.y - e.r - 10, w * shf, 3);
+      }
       ctx.fillStyle = "rgba(255,59,107,0.3)"; ctx.fillRect(e.x - e.r, e.y - e.r - 6, w, 3);
       ctx.fillStyle = "#ff3b6b"; ctx.fillRect(e.x - e.r, e.y - e.r - 6, w * hpf, 3);
       // taunt speech bubble
