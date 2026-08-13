@@ -457,10 +457,14 @@
   }
 
   // ---- music (original Axel-F-style chiptune loop) ----
-  let audioCtx = null, musicBuffer = null, musicSource = null, musicOn = true, musicReady = false;
+  let audioCtx = null, musicGain = null, musicBuffer = null, musicSource = null, musicOn = true, musicReady = false;
+  const MUSIC_VOL = 0.25; // keep it low
   function initAudio() {
     if (audioCtx) return;
     try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; return; }
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = MUSIC_VOL;
+    musicGain.connect(audioCtx.destination);
     fetch("music.wav").then((r) => r.arrayBuffer()).then((buf) => audioCtx.decodeAudioData(buf)).then((dec) => {
       musicBuffer = dec; musicReady = true; if (musicOn) playMusic();
     }).catch(() => { musicReady = false; });
@@ -468,9 +472,10 @@
   function playMusic() {
     if (!audioCtx || !musicBuffer || !musicOn) return;
     if (audioCtx.state === "suspended") audioCtx.resume();
+    stopMusic(); // avoid stacking sources
     musicSource = audioCtx.createBufferSource();
     musicSource.buffer = musicBuffer; musicSource.loop = true;
-    musicSource.connect(audioCtx.destination);
+    musicSource.connect(musicGain);
     musicSource.start(0);
   }
   function stopMusic() { if (musicSource) { try { musicSource.stop(); } catch (e) {} musicSource = null; } }
