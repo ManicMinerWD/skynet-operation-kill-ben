@@ -146,7 +146,7 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
     return {
       ben: { x: W / 2, y: H - 60, r: 18, speed: 4, hp: 100, shield: 0, invuln: 0, speedBoost: 0 },
       enemies: [], bullets: [], particles: [], powerups: [],
-      score: 0, wave: 1, fireCd: 0,
+      score: 0, wave: 1, fireCd: 0, ctrlHeld: false,
       spawnTimer: 0, spawnInterval: 84,
       puTimer: 200, // frames until next power-up
       waveTimer: 0, waveDuration: 600,
@@ -168,12 +168,13 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
   // ---------- input ----------
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
-    if (state) { state.keys[k] = true; if (state.keys2) state.keys2[k] = true; }
+    if (state) { state.keys[k] = true; if (state.keys2) state.keys2[k] = true; if (state.ctrlHeld !== undefined) state.ctrlHeld = e.ctrlKey; }
     if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) e.preventDefault();
+    if (e.ctrlKey) e.preventDefault();
   });
   window.addEventListener("keyup", (e) => {
     const k = e.key.toLowerCase();
-    if (state) { state.keys[k] = false; if (state.keys2) state.keys2[k] = false; }
+    if (state) { state.keys[k] = false; if (state.keys2) state.keys2[k] = false; if (state.ctrlHeld !== undefined) state.ctrlHeld = e.ctrlKey; }
   });
   modeBtns.forEach((b) => b.addEventListener("click", () => {
     mode = b.dataset.mode;
@@ -219,11 +220,11 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
     if (b.shield > 0) b.shield--;
     if (b.invuln > 0) b.invuln--;
 
-    // fire (J or F) — Ben finally fights back
+    // fire (CTRL) — Ben finally fights back
     if (s.fireCd > 0) s.fireCd--;
-    if ((s.keys["j"] || s.keys["f"]) && s.fireCd <= 0) {
-      s.bullets.push({ x: b.x, y: b.y - b.r, vy: -9 });
-      s.fireCd = 10;
+    if ((s.keys["control"] || s.ctrlHeld) && s.fireCd <= 0) {
+      s.bullets.push({ x: b.x, y: b.y - b.r, vy: -11 });
+      s.fireCd = 8;
     }
 
     // spawn enemies
@@ -403,8 +404,8 @@ Ben, unaware he'd been saved by a vacuum, went to pet the cat.
 
     // bullets (defend)
     if (s.bullets) {
-      ctx.fillStyle = "#ffd36b";
-      for (const bl of s.bullets) { ctx.fillRect(bl.x - 2, bl.y - 6, 4, 10); }
+      ctx.fillStyle = "#ffe14d";
+      for (const bl of s.bullets) { ctx.fillRect(bl.x - 3, bl.y - 9, 6, 14); }
     }
 
     // enemies
