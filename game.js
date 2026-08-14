@@ -113,7 +113,7 @@
 
   function newState() {
     return {
-      gold: 90, castleHp: 20, castleMax: 20,
+      gold: 60, castleHp: 20, castleMax: 20,
       wave: 0, // 0 = pre-game / between waves
       enemies: [], towers: [], bullets: [], particles: [],
       spawnQueue: [], spawnTimer: 0, spawnInterval: 55,
@@ -158,7 +158,7 @@
     state.spawnInterval = w.spawn;
     state.spawnTimer = 0;
     state.waveActive = true;
-    state.gold += 20;
+    state.gold += 10;
     showBanner("SKYNET // LEVEL " + state.wave + "/" + WAVE_COUNT, "The appliances advance. Build your defenses, Ben.", 3500);
   }
 
