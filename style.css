@@ -34,12 +34,26 @@ canvas {
 #hud {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 18px;
   margin-top: 10px;
   font-size: 14px;
   color: var(--ink);
 }
 #hud strong { color: var(--neon); }
+#hud .controls { display: inline-flex; gap: 6px; }
+.hud-btn {
+  margin-top: 0;
+  padding: 4px 10px;
+  background: #11202a;
+  color: var(--neon);
+  border: 1px solid var(--neon);
+  border-radius: 6px;
+  font: 13px monospace;
+  cursor: pointer;
+}
+.hud-btn:hover { background: #16313f; }
+.hud-btn.active { background: var(--neon); color: #05070a; }
 #music-btn {
   background: #11202a; color: var(--neon); border: 1px solid var(--neon);
   border-radius: 6px; padding: 4px 10px; font: 13px monospace; cursor: pointer;
@@ -111,3 +125,12 @@ button:hover { box-shadow: 0 0 14px rgba(25, 240, 200, 0.7); }
   border-radius: 5px; font-size: 12px; font-family: inherit; cursor: pointer; letter-spacing: 0.5px;
 }
 #tower-menu .tower-btn:hover { background: rgba(25,240,200,0.15); }
+#tower-menu .tm-action {
+  display: block; width: 100%; margin: 6px 0 0; padding: 7px 10px;
+  background: rgba(25,240,200,0.12); color: var(--neon); border: 1px solid var(--neon);
+  border-radius: 5px; font-size: 12px; font-family: inherit; cursor: pointer; letter-spacing: 0.5px;
+}
+#tower-menu .tm-action:hover { background: rgba(25,240,200,0.25); }
+#tower-menu .tm-action:disabled { opacity: 0.5; cursor: default; }
+#tower-menu .tm-sell { background: rgba(255,59,107,0.12); color: var(--danger); border-color: var(--danger); }
+#tower-menu .tm-sell:hover { background: rgba(255,59,107,0.25); }

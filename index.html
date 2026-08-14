@@ -4,27 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SkyNet Operation: Kill Ben — Castle Defense</title>
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
   <div id="game-wrap">
     <h1>SKYNET: CASTLE DEFENSE</h1>
-    <p class="subtitle">Appliances are coming for Ben's bunker. Build turrets. Survive 100 levels.</p>
+    <p class="subtitle">Appliances are coming for Ben's bunker. Build turrets. Survive 30 levels, you magnificent bastard.</p>
 
     <canvas id="game" width="800" height="500"></canvas>
 
     <div id="hud">
-      <span>Gold: <strong id="gold">140</strong></span>
-      <span>Level: <strong id="wave">0/100</strong></span>
-      <span>Bunker HP: <strong id="castle">15</strong></span>
-      <button id="music-btn" type="button">♪ Music: ON</button>
+      <span>Gold: <strong id="gold">200</strong></span>
+      <span>Level: <strong id="wave">0/30</strong></span>
+      <span>Bunker HP: <strong id="castle">20</strong></span>
+      <span class="controls">
+        <button id="pause-btn" type="button" class="hud-btn">⏸ Pause</button>
+        <button id="speed-btn" type="button" class="hud-btn">⏩ 1x</button>
+        <button id="sfx-btn" type="button" class="hud-btn">🔊 SFX: ON</button>
+        <button id="music-btn" type="button">♪ Music: ON</button>
+      </span>
     </div>
 
     <div id="legend">
-      Click a <strong>+</strong> slot to build. Click a built turret to upgrade. Towers:
-      <span class="lg toaster">Toaster Turret (65, fast)</span> &middot;
-      <span class="lg fridge">Fridge Mortar (110, splash)</span> &middot;
-      <span class="lg drone">Drone Sentry (85, precise)</span>
+      Click a <strong>+</strong> slot to build. Click a built turret to upgrade or sell. Hover a turret to see its range.
+      <span class="lg toaster">Toaster (60, fast)</span> &middot;
+      <span class="lg fridge">Fridge Mortar (100, splash)</span> &middot;
+      <span class="lg drone">Drone Sentry (75, precise)</span>
     </div>
 
     <div id="tower-menu">
@@ -32,6 +37,8 @@
       <button class="tower-btn" data-tower="toaster">Toaster Turret</button>
       <button class="tower-btn" data-tower="fridge">Fridge Mortar</button>
       <button class="tower-btn" data-tower="drone">Drone Sentry</button>
+      <button id="upgrade-btn" class="tm-action" type="button">Upgrade</button>
+      <button id="sell-btn" class="tm-action tm-sell" type="button">Sell</button>
     </div>
 
     <div id="banner" class="hidden"></div>
@@ -44,6 +51,6 @@
       </div>
     </div>
   </div>
-  <script src="game.js?v=17"></script>
+  <script src="game.js?v=18"></script>
 </body>
 </html>

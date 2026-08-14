@@ -37,6 +37,11 @@
   const towerMenu = document.getElementById("tower-menu");
   const towerBtns = Array.from(towerMenu.querySelectorAll(".tower-btn"));
   const banner = document.getElementById("banner");
+  const pauseBtn = document.getElementById("pause-btn");
+  const speedBtn = document.getElementById("speed-btn");
+  const sfxBtn = document.getElementById("sfx-btn");
+  const sellBtn = document.getElementById("sell-btn");
+  const upgradeBtn = document.getElementById("upgrade-btn");
 
   // ---- PATH (waypoints appliances follow toward Ben's bunker) ----
   const PATH = [
@@ -56,60 +61,62 @@
 
   // ---- TOWER TYPES ----
   const TOWERS = {
-    toaster: { name: "Toaster Turret", color: "#e08b3a", cost: 65, range: 110, dmg: 6, rate: 18, splash: 0,
-               up: { cost: 80, dmg: 12, range: 130 } },
-    fridge:  { name: "Fridge Mortar", color: "#7fd0ff", cost: 110, range: 140, dmg: 18, rate: 45, splash: 38,
-               up: { cost: 120, dmg: 32, range: 160 } },
-    drone:   { name: "Drone Sentry", color: "#ff5b7a", cost: 85, range: 150, dmg: 9, rate: 12, splash: 0,
-               up: { cost: 100, dmg: 16, range: 175 } },
+    toaster: { name: "Toaster Turret", color: "#e08b3a", cost: 60, range: 110, dmg: 6, rate: 18, splash: 0,
+               up: { cost: 80, dmg: 13, range: 130 } },
+    fridge:  { name: "Fridge Mortar", color: "#7fd0ff", cost: 100, range: 140, dmg: 18, rate: 45, splash: 38,
+               up: { cost: 120, dmg: 34, range: 160 } },
+    drone:   { name: "Drone Sentry", color: "#ff5b7a", cost: 75, range: 150, dmg: 9, rate: 12, splash: 0,
+               up: { cost: 100, dmg: 17, range: 175 } },
   };
+  const SELL_REFUND = 0.7; // fraction of total invested returned on sell
 
   // ---- ENEMY TYPES ----
   const ENEMIES = [
-    { name: "Roomba", color: "#9aa7b2", r: 13, hp: 30, speed: 1.0, bounty: 5 },
-    { name: "Toaster", color: "#e08b3a", r: 15, hp: 50, speed: 0.8, bounty: 8 },
-    { name: "SmartFridge", color: "#7fd0ff", r: 20, hp: 115, speed: 0.55, bounty: 15 },
-    { name: "Drone", color: "#ff5b7a", r: 12, hp: 40, speed: 1.5, bounty: 9 },
-    { name: "Printer", color: "#c0c0c0", r: 17, hp: 80, speed: 0.7, bounty: 11 },
+    { name: "Roomba", color: "#9aa7b2", r: 13, hp: 30, speed: 1.0, bounty: 8 },
+    { name: "Toaster", color: "#e08b3a", r: 15, hp: 50, speed: 0.8, bounty: 12 },
+    { name: "SmartFridge", color: "#7fd0ff", r: 20, hp: 115, speed: 0.55, bounty: 22 },
+    { name: "Drone", color: "#ff5b7a", r: 12, hp: 40, speed: 1.5, bounty: 14 },
+    { name: "Printer", color: "#c0c0c0", r: 17, hp: 80, speed: 0.7, bounty: 16 },
   ];
 
-  // ---- WAVES: 100 escalating levels, generated ----
-  const WAVE_COUNT = 100;
+  // ---- WAVES: 30 escalating levels, generated ----
+  const WAVE_COUNT = 30;
   function genWave(n) {
     // n is 1-based wave number
-    const tier = Math.floor((n - 1) / 20); // 0..4 difficulty bands
-    const scale = 1 + (n - 1) * 0.12;      // enemy HP/speed ramp
-    const count = 2 * (5 + Math.floor(n * 0.9)); // doubled enemy density per wave
+    const tier = Math.floor((n - 1) / 6); // 0..4 difficulty bands
+    const scale = 1 + (n - 1) * 0.15;     // enemy HP/speed ramp (steeper)
+    const count = 5 + Math.floor(n * 1.0); // enemy density per wave
     const comp = [0, 0, 0, 0, 0];
     // weight toward tougher enemies as waves climb
-    comp[0] = Math.max(2, Math.round(6 * Math.max(0.3, 1 - n * 0.02))); // roombas
-    comp[1] = Math.round(3 + n * 0.15);  // toasters
-    comp[2] = Math.round((n >= 3 ? 1 : 0) + n * 0.06); // fridges
-    comp[3] = Math.round((n >= 2 ? 1 : 0) + n * 0.10); // drones
-    comp[4] = Math.round((n >= 4 ? 1 : 0) + n * 0.05); // printers
+    comp[0] = Math.max(2, Math.round(6 * Math.max(0.4, 1 - n * 0.015))); // roombas
+    comp[1] = Math.round(2 + n * 0.12);   // toasters
+    comp[2] = Math.round((n >= 3 ? 1 : 0) + n * 0.05); // fridges
+    comp[3] = Math.round((n >= 2 ? 1 : 0) + n * 0.08); // drones
+    comp[4] = Math.round((n >= 4 ? 1 : 0) + n * 0.04); // printers
     const total = comp.reduce((a, b) => a + b, 0);
     const adj = Math.max(count, total);
     // normalize to ~adj enemies
     const f = adj / total;
     for (let i = 0; i < 5; i++) comp[i] = Math.round(comp[i] * f);
-    const spawn = Math.max(18, 55 - n * 0.4); // faster spawns later
+    const spawn = Math.max(20, 60 - n * 0.6); // faster spawns later
     return { comp, spawn: Math.round(spawn), scale, tier };
   }
   // expose per-wave enemy scaling via a lookup the spawner uses
-  function waveScale(n) { return 1 + (n - 1) * 0.12; }
+  function waveScale(n) { return 1 + (n - 1) * 0.15; }
 
-  let state = null, running = false, lastTime = 0;
+  let state = null, running = false, lastTime = 0, paused = false, gameSpeed = 1;
   let selectedSlot = null; // slot index awaiting tower choice
 
   function newState() {
     return {
-      gold: 130, castleHp: 15, castleMax: 15,
+      gold: 200, castleHp: 20, castleMax: 20,
       wave: 0, // 0 = pre-game / between waves
       enemies: [], towers: [], bullets: [], particles: [],
       spawnQueue: [], spawnTimer: 0, spawnInterval: 55,
       waveActive: false, betweenTimer: 120, // countdown before wave starts
       slots: SLOTS.map((s) => ({ x: s.x, y: s.y, tower: null })),
       mouse: { x: -99, y: -99 },
+      hoverSlot: null, hoverBuildKind: null,
     };
   }
 
@@ -147,14 +154,14 @@
     state.spawnInterval = w.spawn;
     state.spawnTimer = 0;
     state.waveActive = true;
-    state.gold += 20;
+    state.gold += 35;
     showBanner("SKYNET // LEVEL " + state.wave + "/" + WAVE_COUNT, "The appliances advance. Build your defenses, Ben.", 3500);
   }
 
   function spawnEnemy(ti) {
     const t = ENEMIES[ti];
     const scale = waveScale(state.wave);
-    const e = { ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale), shield: Math.round(t.hp * scale * 0.25), maxShield: Math.round(t.hp * scale * 0.25), speed: t.speed * (1 + (state.wave - 1) * 0.01), r: t.r, dead: false, reached: false, taunt: null, tauntTimer: 0 };
+    const e = { ti, x: PATH[0].x, y: PATH[0].y, dist: 0, hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale), shield: Math.round(t.hp * scale * 0.25), maxShield: Math.round(t.hp * scale * 0.25), speed: t.speed * (1 + (state.wave - 1) * 0.02), r: t.r, dead: false, reached: false, taunt: null, tauntTimer: 0 };
     // occasional taunt: ~25% of enemies, pester Ben
     if (Math.random() < 0.25) {
       const lines = ["Ben's a total D", "Ben is mid", "Skill issue, Ben", "L + ratio, Ben", "Ben's a joke", "lol Ben", "Get rekt Ben"];
@@ -167,7 +174,15 @@
   // ---- input ----
   canvas.addEventListener("mousemove", (e) => {
     const r = canvas.getBoundingClientRect();
-    state && (state.mouse.x = (e.clientX - r.left) * (W / r.width), state.mouse.y = (e.clientY - r.top) * (H / r.height));
+    const mx = (e.clientX - r.left) * (W / r.width), my = (e.clientY - r.top) * (H / r.height);
+    state && (state.mouse.x = mx, state.mouse.y = my);
+    if (!state) return;
+    let hs = null;
+    for (let i = 0; i < state.slots.length; i++) {
+      const s = state.slots[i];
+      if (Math.hypot(mx - s.x, my - s.y) < 22) { hs = i; break; }
+    }
+    state.hoverSlot = hs;
   });
   canvas.addEventListener("mousedown", (e) => {
     if (!state || !running) return;
@@ -186,9 +201,24 @@
   });
 
   function openTowerMenu(x, y) {
+    const slot = selectedSlot != null ? state.slots[selectedSlot] : null;
+    const isBuilt = slot && slot.tower;
     towerMenu.style.display = "block";
     towerMenu.style.left = Math.min(x + 12, W - 180) + "px";
     towerMenu.style.top = Math.min(y - 10, H - 150) + "px";
+    // build buttons: show only when empty slot
+    towerBtns.forEach((b) => { b.style.display = isBuilt ? "none" : "block"; });
+    if (isBuilt) {
+      const t = slot.tower, def = TOWERS[t.kind];
+      if (upgradeBtn) {
+        if (t.upgraded) { upgradeBtn.textContent = def.name + " (MAX)"; upgradeBtn.disabled = true; upgradeBtn.style.opacity = 0.5; }
+        else { upgradeBtn.textContent = "Upgrade (" + def.up.cost + ")"; upgradeBtn.disabled = false; upgradeBtn.style.opacity = 1; }
+      }
+      if (sellBtn) {
+        const invested = def.cost + (t.upgraded ? def.up.cost : 0);
+        sellBtn.textContent = "Sell (+" + Math.round(invested * SELL_REFUND) + ")";
+      }
+    }
   }
   function closeTowerMenu() { towerMenu.style.display = "none"; selectedSlot = null; }
 
@@ -201,24 +231,54 @@
     if (selectedSlot == null || !state) return;
     const kind = btn.dataset.tower;
     const slot = state.slots[selectedSlot];
-    if (slot.tower) {
-      // upgrade
-      const t = slot.tower; const def = TOWERS[t.kind];
-      if (!t.upgraded && state.gold >= def.up.cost) {
-        state.gold -= def.up.cost; t.upgraded = true; t.dmg = def.up.dmg; t.range = def.up.range;
-        spawnParticles(slot.x, slot.y, def.color);
-      }
-    } else {
-      // build
-      const def = TOWERS[kind];
-      if (state.gold >= def.cost) {
-        state.gold -= def.cost;
-        slot.tower = { kind, dmg: def.dmg, range: def.range, rate: def.rate, splash: def.splash, color: def.color, cd: 0, upgraded: false };
-        spawnParticles(slot.x, slot.y, def.color);
-      }
+    const def = TOWERS[kind];
+    if (state.gold >= def.cost) {
+      state.gold -= def.cost;
+      slot.tower = { kind, dmg: def.dmg, range: def.range, rate: def.rate, splash: def.splash, color: def.color, cd: 0, upgraded: false };
+      spawnParticles(slot.x, slot.y, def.color);
     }
     closeTowerMenu();
   }));
+
+  if (upgradeBtn) upgradeBtn.addEventListener("click", () => {
+    if (selectedSlot == null || !state) return;
+    const slot = state.slots[selectedSlot];
+    if (!slot.tower) return;
+    const t = slot.tower, def = TOWERS[t.kind];
+    if (!t.upgraded && state.gold >= def.up.cost) {
+      state.gold -= def.up.cost; t.upgraded = true; t.dmg = def.up.dmg; t.range = def.up.range;
+      spawnParticles(slot.x, slot.y, def.color); sfxUpgrade();
+    }
+    openTowerMenu(slot.x, slot.y);
+  });
+  if (sellBtn) sellBtn.addEventListener("click", () => {
+    if (selectedSlot == null || !state) return;
+    const slot = state.slots[selectedSlot];
+    if (!slot.tower) return;
+    const t = slot.tower, def = TOWERS[t.kind];
+    const invested = def.cost + (t.upgraded ? def.up.cost : 0);
+    state.gold += Math.round(invested * SELL_REFUND);
+    spawnParticles(slot.x, slot.y, "#888"); sfxSell();
+    slot.tower = null;
+    closeTowerMenu();
+  });
+
+  // ---- pause / speed / sfx toggles ----
+  if (pauseBtn) pauseBtn.addEventListener("click", () => {
+    if (!running) return;
+    paused = !paused;
+    pauseBtn.textContent = paused ? "▶ Resume" : "⏸ Pause";
+    pauseBtn.classList.toggle("active", paused);
+  });
+  if (speedBtn) speedBtn.addEventListener("click", () => {
+    gameSpeed = gameSpeed === 1 ? 2 : gameSpeed === 2 ? 3 : 1;
+    speedBtn.textContent = "⏩ " + gameSpeed + "x";
+  });
+  let sfxOn = true;
+  if (sfxBtn) sfxBtn.addEventListener("click", () => {
+    sfxOn = !sfxOn;
+    sfxBtn.textContent = "🔊 SFX: " + (sfxOn ? "ON" : "OFF");
+  });
 
   function spawnParticles(x, y, color) {
     for (let i = 0; i < 8; i++) {
@@ -256,7 +316,7 @@
       const p = pointAt(e.dist);
       e.x = p.x; e.y = p.y;
       if (e.tauntTimer > 0) e.tauntTimer--; else e.taunt = null;
-      if (e.dist >= PLEN) { e.reached = true; s.castleHp -= 3; spawnParticles(CASTLE.x, CASTLE.y, "#ff3b6b"); }
+      if (e.dist >= PLEN) { e.reached = true; s.castleHp -= 2; sfxLeak(); spawnParticles(CASTLE.x, CASTLE.y, "#ff3b6b"); }
     }
     s.enemies = s.enemies.filter((e) => !e.dead && !e.reached);
 
@@ -274,6 +334,7 @@
         if (best) {
           t.cd = t.rate;
           s.bullets.push({ x: slot.x, y: slot.y, tx: best.x, ty: best.y, target: best, dmg: t.dmg, splash: t.splash, color: t.color });
+          if (t.splash) sfxBoom(); else sfxShot();
         }
       }
     }
@@ -395,8 +456,8 @@
         }
         if (t.upgraded) { ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(slot.x, slot.y, 17, 0, Math.PI * 2); ctx.stroke(); }
         // range ring when hovered/selected
-        if (selectedSlot !== null && s.slots[selectedSlot] === slot) {
-          ctx.strokeStyle = "rgba(25,240,200,0.4)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(slot.x, slot.y, t.range, 0, Math.PI * 2); ctx.stroke();
+        if ((selectedSlot !== null && s.slots[selectedSlot] === slot) || s.hoverSlot !== null && s.slots[s.hoverSlot] === slot) {
+          ctx.strokeStyle = "rgba(25,240,200,0.35)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(slot.x, slot.y, t.range, 0, Math.PI * 2); ctx.stroke();
         }
       } else {
         ctx.beginPath(); ctx.arc(slot.x, slot.y, 13, 0, Math.PI * 2);
@@ -404,6 +465,12 @@
         ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = "#ffe14d"; ctx.font = "16px monospace"; ctx.textAlign = "center"; ctx.fillText("+", slot.x, slot.y + 5);
       }
+    }
+    // hover range preview for empty slot using currently-selected build kind (none) — show neutral ring only
+    if (s.hoverSlot !== null && s.slots[s.hoverSlot] && !s.slots[s.hoverSlot].tower) {
+      const hs = s.slots[s.hoverSlot];
+      ctx.strokeStyle = "rgba(255,225,77,0.5)"; ctx.lineWidth = 1; ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.arc(hs.x, hs.y, 15, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
     }
 
     // enemies
@@ -449,12 +516,56 @@
 
   function loop(t) {
     if (!running) return;
+    if (paused) { lastTime = t; requestAnimationFrame(loop); return; }
     const dt = t - lastTime; lastTime = t;
-    update(dt);
+    const steps = gameSpeed;
+    for (let s = 0; s < steps; s++) update(dt / steps);
     if (!running) return;
     draw();
     requestAnimationFrame(loop);
   }
+
+  // ---- synthesized combat SFX (no assets) ----
+  let sfxCtx = null;
+  function getSfxCtx() {
+    if (sfxCtx) return sfxCtx;
+    try { sfxCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { sfxCtx = null; }
+    return sfxCtx;
+  }
+  function blip(freq, dur, type, vol) {
+    if (!sfxOn) return;
+    const c = getSfxCtx(); if (!c) return;
+    try {
+      if (c.state === "suspended") c.resume();
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type || "square"; o.frequency.value = freq;
+      g.gain.value = 0.0001; o.connect(g); g.connect(c.destination);
+      const now = c.currentTime;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(vol || 0.08, now + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      o.start(now); o.stop(now + dur + 0.02);
+    } catch (e) { /* audio unavailable */ }
+  }
+  function noiseBurst(dur, vol) {
+    if (!sfxOn) return;
+    const c = getSfxCtx(); if (!c) return;
+    try {
+      if (c.state === "suspended") c.resume();
+      const n = Math.floor((c.sampleRate || 44100) * dur);
+      const buf = c.createBuffer(1, n, (c.sampleRate || 44100));
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const src = c.createBufferSource(); src.buffer = buf;
+      const g = c.createGain(); g.gain.value = vol || 0.12;
+      src.connect(g); g.connect(c.destination); src.start();
+    } catch (e) { /* audio unavailable */ }
+  }
+  function sfxShot() { blip(620 + Math.random() * 120, 0.05, "square", 0.05); }
+  function sfxBoom() { noiseBurst(0.18, 0.14); blip(120, 0.18, "sawtooth", 0.06); }
+  function sfxLeak() { blip(180, 0.25, "sawtooth", 0.10); }
+  function sfxUpgrade() { blip(440, 0.08, "square", 0.07); setTimeout(() => blip(660, 0.10, "square", 0.07), 70); }
+  function sfxSell() { blip(330, 0.10, "triangle", 0.07); }
 
   // ---- music (original Axel-F-style chiptune loop) ----
   let audioCtx = null, musicGain = null, musicBuffer = null, musicSource = null, musicOn = true, musicReady = false;
