@@ -55,19 +55,23 @@
   // ---- BUILD SLOTS (near the path) ----
   const SLOTS = [
     { x: 110, y: 180 }, { x: 270, y: 170 }, { x: 330, y: 320 },
-    { x: 520, y: 180 }, { x: 520, y: 320 }, { x: 660, y: 250 },
-    { x: 220, y: 430 }, { x: 470, y: 430 },
+    { x: 470, y: 110 }, { x: 520, y: 180 }, { x: 520, y: 320 },
+    { x: 660, y: 250 }, { x: 700, y: 360 }, { x: 220, y: 430 },
+    { x: 470, y: 430 }, { x: 150, y: 320 }, { x: 380, y: 240 },
+    { x: 600, y: 140 }, { x: 250, y: 360 },
   ];
 
-  // ---- TOWER TYPES ----
+  // ---- TOWER TYPES (multi-tier upgrades: each tower keeps leveling) ----
+  // tiers[0] = base (build); tiers[k] = stats AFTER k upgrades. dmg/range/rate/splash scale per tier.
   const TOWERS = {
     toaster: { name: "Toaster Turret", color: "#e08b3a", cost: 60, range: 110, dmg: 6, rate: 18, splash: 0,
-               up: { cost: 80, dmg: 13, range: 130 } },
+               up: [ { cost: 55, dmg: 11, range: 120 }, { cost: 90, dmg: 17, range: 130 }, { cost: 140, dmg: 25, range: 140 } ] },
     fridge:  { name: "Fridge Mortar", color: "#7fd0ff", cost: 100, range: 140, dmg: 18, rate: 45, splash: 38,
-               up: { cost: 120, dmg: 34, range: 160 } },
+               up: [ { cost: 80, dmg: 28, range: 150 }, { cost: 130, dmg: 42, range: 165 }, { cost: 200, dmg: 62, range: 185 } ] },
     drone:   { name: "Drone Sentry", color: "#ff5b7a", cost: 75, range: 150, dmg: 9, rate: 12, splash: 0,
-               up: { cost: 100, dmg: 17, range: 175 } },
+               up: [ { cost: 60, dmg: 15, range: 165 }, { cost: 100, dmg: 23, range: 180 }, { cost: 160, dmg: 34, range: 200 } ] },
   };
+  const MAX_TIER = 3;
   const SELL_REFUND = 0.7; // fraction of total invested returned on sell
 
   // ---- ENEMY TYPES ----
@@ -84,8 +88,8 @@
   function genWave(n) {
     // n is 1-based wave number
     const tier = Math.floor((n - 1) / 6); // 0..4 difficulty bands
-    const scale = 1 + (n - 1) * 0.15;     // enemy HP/speed ramp (steeper)
-    const count = 5 + Math.floor(n * 1.0); // enemy density per wave
+    const scale = 1 + (n - 1) * 0.22;     // enemy HP/speed ramp
+    const count = 6 + Math.floor(n * 1.1); // enemy density per wave
     const comp = [0, 0, 0, 0, 0];
     // weight toward tougher enemies as waves climb
     comp[0] = Math.max(2, Math.round(6 * Math.max(0.4, 1 - n * 0.015))); // roombas
@@ -102,7 +106,7 @@
     return { comp, spawn: Math.round(spawn), scale, tier };
   }
   // expose per-wave enemy scaling via a lookup the spawner uses
-  function waveScale(n) { return 1 + (n - 1) * 0.15; }
+  function waveScale(n) { return 1 + (n - 1) * 0.22; }
 
   let state = null, running = false, lastTime = 0, paused = false, gameSpeed = 1;
   let selectedSlot = null; // slot index awaiting tower choice
@@ -211,11 +215,11 @@
     if (isBuilt) {
       const t = slot.tower, def = TOWERS[t.kind];
       if (upgradeBtn) {
-        if (t.upgraded) { upgradeBtn.textContent = def.name + " (MAX)"; upgradeBtn.disabled = true; upgradeBtn.style.opacity = 0.5; }
-        else { upgradeBtn.textContent = "Upgrade (" + def.up.cost + ")"; upgradeBtn.disabled = false; upgradeBtn.style.opacity = 1; }
+        if (t.tier >= MAX_TIER) { upgradeBtn.textContent = def.name + " Mk." + (t.tier + 1) + " (MAX)"; upgradeBtn.disabled = true; upgradeBtn.style.opacity = 0.5; }
+        else { upgradeBtn.textContent = "Upgrade → Mk." + (t.tier + 2) + " (" + def.up[t.tier].cost + ")"; upgradeBtn.disabled = false; upgradeBtn.style.opacity = 1; }
       }
       if (sellBtn) {
-        const invested = def.cost + (t.upgraded ? def.up.cost : 0);
+        const invested = def.cost + t.invested;
         sellBtn.textContent = "Sell (+" + Math.round(invested * SELL_REFUND) + ")";
       }
     }
@@ -234,7 +238,7 @@
     const def = TOWERS[kind];
     if (state.gold >= def.cost) {
       state.gold -= def.cost;
-      slot.tower = { kind, dmg: def.dmg, range: def.range, rate: def.rate, splash: def.splash, color: def.color, cd: 0, upgraded: false };
+      slot.tower = { kind, dmg: def.dmg, range: def.range, rate: def.rate, splash: def.splash, color: def.color, cd: 0, tier: 0, invested: 0 };
       spawnParticles(slot.x, slot.y, def.color);
     }
     closeTowerMenu();
@@ -245,8 +249,12 @@
     const slot = state.slots[selectedSlot];
     if (!slot.tower) return;
     const t = slot.tower, def = TOWERS[t.kind];
-    if (!t.upgraded && state.gold >= def.up.cost) {
-      state.gold -= def.up.cost; t.upgraded = true; t.dmg = def.up.dmg; t.range = def.up.range;
+    if (t.tier < MAX_TIER && state.gold >= def.up[t.tier].cost) {
+      state.gold -= def.up[t.tier].cost; t.tier++;
+      t.dmg = def.up[t.tier - 1].dmg; t.range = def.up[t.tier - 1].range;
+      if (def.up[t.tier - 1].rate) t.rate = def.up[t.tier - 1].rate;
+      if (def.up[t.tier - 1].splash) t.splash = def.up[t.tier - 1].splash;
+      t.invested += def.up[t.tier - 1].cost;
       spawnParticles(slot.x, slot.y, def.color); sfxUpgrade();
     }
     openTowerMenu(slot.x, slot.y);
@@ -256,7 +264,7 @@
     const slot = state.slots[selectedSlot];
     if (!slot.tower) return;
     const t = slot.tower, def = TOWERS[t.kind];
-    const invested = def.cost + (t.upgraded ? def.up.cost : 0);
+    const invested = def.cost + t.invested;
     state.gold += Math.round(invested * SELL_REFUND);
     spawnParticles(slot.x, slot.y, "#888"); sfxSell();
     slot.tower = null;
@@ -454,7 +462,13 @@
         } else {
           ctx.beginPath(); ctx.arc(slot.x, slot.y, 15, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
         }
-        if (t.upgraded) { ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(slot.x, slot.y, 17, 0, Math.PI * 2); ctx.stroke(); }
+        if (t.tier > 0) { ctx.strokeStyle = "#ffe14d"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(slot.x, slot.y, 17, 0, Math.PI * 2); ctx.stroke(); }
+        // tier pips above tower
+        if (t.tier > 0) {
+          const pw = 4, gap = 2, total = t.tier * pw + (t.tier - 1) * gap;
+          let px = slot.x - total / 2;
+          for (let k = 0; k < t.tier; k++) { ctx.fillStyle = "#ffe14d"; ctx.fillRect(px, slot.y - 24, pw, 3); px += pw + gap; }
+        }
         // range ring when hovered/selected
         if ((selectedSlot !== null && s.slots[selectedSlot] === slot) || s.hoverSlot !== null && s.slots[s.hoverSlot] === slot) {
           ctx.strokeStyle = "rgba(25,240,200,0.35)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(slot.x, slot.y, t.range, 0, Math.PI * 2); ctx.stroke();
